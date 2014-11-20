@@ -116,7 +116,7 @@ def git_clone(git_repo, work_dir, force=False):
     If work_dir exists and force is False (default), aborts.
 
     If work_dir exists and force is True, performs a 'git fetch' followed by
-    'git reset origin/master'.
+    'git reset --hard origin/master'.
 
     Takes care to allow SSH agent forwarding to be used for authentication.
 
@@ -131,7 +131,7 @@ def git_clone(git_repo, work_dir, force=False):
         with cd(work_dir):
             sudo("SSH_AUTH_SOCK={ssh_auth_sock} git fetch".format(
                 ssh_auth_sock=ssh_auth_sock))
-            sudo("git reset origin/master")
+            sudo("git reset --hard origin/master")
     else:
         sudo("SSH_AUTH_SOCK={ssh_auth_sock} git clone {git_repo} {work_dir}".format(
             ssh_auth_sock=ssh_auth_sock,
