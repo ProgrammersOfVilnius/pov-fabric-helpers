@@ -211,7 +211,32 @@ def git_clone(git_repo, work_dir, branch='master', force=False):
                 git_repo=git_repo,
                 work_dir=work_dir))
     with cd(work_dir):
-        got_commit = sudo("git describe --always", quiet=True).strip()
+        got_commit = sudo("git describe --always --dirty", quiet=True).strip()
+    return got_commit
+
+
+@with_settings(sudo_user='root')
+def git_update(work_dir, branch='master', force=False):
+    """Update a specified git checkout.
+
+    Aborts if the checkout cannot be fast-forwarded to the specified branch,
+    unless force is specified.
+
+    Discards all local changes (committed or not) if force is True, so use with
+    care!
+
+    Returns the commit hash of the version fetched.
+    """
+    env = {}
+    env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
+    with cd(work_dir):
+        with settings(shell_env=env):
+            sudo("git fetch")
+        if force:
+            sudo("git reset --hard origin/{branch}".format(branch=branch))
+        else:
+            sudo("git merge --ff-only origin/{branch}".format(branch=branch))
+        got_commit = sudo("git describe --always --dirty", quiet=True).strip()
     return got_commit
 
 

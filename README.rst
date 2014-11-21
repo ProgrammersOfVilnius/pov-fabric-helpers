@@ -13,6 +13,7 @@ A possibly-incomplete list of them:
 - ``ensure_known_host("hostname ssh-rsa AAA....")``
 - ``ensure_user("username")``
 - ``git_clone("git@github.com:ProgrammersOfVilnius/project.git", "/opt/project")``
+- ``git_update("/opt/project")``
 - ``ensure_postgresql_user("username")``
 - ``ensure_postgresql_db("dbname", "owner")``
 - ``changelog("# Installing stuff")`` (requires pov-admin-tools_)
