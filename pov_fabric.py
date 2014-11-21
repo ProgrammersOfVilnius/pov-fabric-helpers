@@ -111,13 +111,13 @@ def ensure_user(user):
 #
 
 @with_settings(sudo_user='root')
-def git_clone(git_repo, work_dir, force=False):
-    """Clone a git repository into work_dir.
+def git_clone(git_repo, work_dir, branch='master', force=False):
+    """Clone a specified branch of the git repository into work_dir.
 
     If work_dir exists and force is False (default), aborts.
 
     If work_dir exists and force is True, performs a 'git fetch' followed by
-    'git reset --hard origin/master'.
+    'git reset --hard origin/{branch}'.
 
     Takes care to allow SSH agent forwarding to be used for authentication.
 
@@ -132,10 +132,11 @@ def git_clone(git_repo, work_dir, force=False):
         with cd(work_dir):
             sudo("SSH_AUTH_SOCK={ssh_auth_sock} git fetch".format(
                 ssh_auth_sock=ssh_auth_sock))
-            sudo("git reset --hard origin/master")
+            sudo("git reset --hard origin/{branch}".format(branch=branch))
     else:
-        sudo("SSH_AUTH_SOCK={ssh_auth_sock} git clone {git_repo} {work_dir}".format(
+        sudo("SSH_AUTH_SOCK={ssh_auth_sock} git clone -b branch {git_repo} {work_dir}".format(
             ssh_auth_sock=ssh_auth_sock,
+            branch=branch,
             git_repo=git_repo,
             work_dir=work_dir))
     with cd(work_dir):
