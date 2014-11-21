@@ -32,7 +32,6 @@ For now add this repository as a git submodule
 
   cd ~/src/project
   git submodule add https://github.com/ProgrammersOfVilnius/pov-fabric-helpers
-  git submodule init
 
 and in your ``fabfile.py`` add
 
