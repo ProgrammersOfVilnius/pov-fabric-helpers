@@ -12,6 +12,7 @@ A possibly-incomplete list of them:
 - ``install_packages("vim screen build-essential")``
 - ``ensure_known_host("hostname ssh-rsa AAA....")``
 - ``ensure_user("username")``
+- ``ensure_locales("en", "lt")``
 - ``git_clone("git@github.com:ProgrammersOfVilnius/project.git", "/opt/project")``
 - ``git_update("/opt/project")``
 - ``ensure_postgresql_user("username")``

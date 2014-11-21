@@ -138,6 +138,18 @@ def ensure_user(user):
         sudo("adduser --system --group --disabled-password --quiet %s" % user)
 
 
+def ensure_locales(*languages):
+    """Make sure locales are generated.
+
+    Example::
+
+        ensure_locales('en', 'lt')
+
+    """
+    for language in languages:
+        sudo("locale-gen --no-purge {language}".format(language=language))
+
+
 #
 # Git
 #
