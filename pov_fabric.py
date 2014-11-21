@@ -77,7 +77,7 @@ def install_packages(*packages, **kw):
       package installation.
 
     """
-    missing_only = kw.pop('missing_only', True)
+    missing_only = kw.pop('missing_only', False)
     interactive = kw.pop('interactive', False)
     if kw:
         raise TypeError('unexpected keyword arguments: {}'
