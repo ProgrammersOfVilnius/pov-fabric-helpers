@@ -6,7 +6,7 @@ import sys
 import posixpath
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
-from fabric.api import run, sudo, quiet, settings, cd, env, abort, task
+from fabric.api import run, sudo, quiet, settings, cd, env, abort, task, with_settings
 from fabric.contrib.files import exists, append
 
 
@@ -110,6 +110,7 @@ def ensure_user(user):
 # Git
 #
 
+@with_settings(sudo_user='root')
 def git_clone(git_repo, work_dir, force=False):
     """Clone a git repository into work_dir.
 
