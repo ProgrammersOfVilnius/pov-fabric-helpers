@@ -150,6 +150,8 @@ def git_clone(git_repo, work_dir, branch='master', force=False):
 
     Returns the commit hash of the version cloned.
     """
+    if 'github.com' in git_repo:
+        ensure_known_host(GITHUB_SSH_HOST_KEY)
     # sudo removes SSH_AUTH_SOCK from the environment, so we can't make use of
     # the ssh agent forwarding unless we cunningly preserve the envvar and sudo
     # to root (because only root and the original user will be able to access
