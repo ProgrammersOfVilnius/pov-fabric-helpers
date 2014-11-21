@@ -93,6 +93,9 @@ To facilitate this ``pov_fabric`` provides three things:
 
    which is equivalent to the original manual subclassing.
 
+   (BTW you can also add parameters with no sensible default this way, e.g.
+   ``BaseInstance.with_params(user=BaseInstance.REQUIRED)``.)
+
 2. ``Instance.define()`` that defines new instances and creates tasks for
    selecting them
 
