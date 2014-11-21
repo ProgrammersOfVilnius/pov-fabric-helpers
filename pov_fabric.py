@@ -146,8 +146,14 @@ def ensure_locales(*languages):
         ensure_locales('en', 'lt')
 
     """
+    supported_locales = run("locale -a", quiet=True).splitlines()
+    # as a shortcut we'll assume that if one xx_... locale is supported
+    # then all of them are supported
+    supported_languages = set(locale.partition('.')[0].partition('_')[0]
+                              for locale in supported_locales)
     for language in languages:
-        sudo("locale-gen --no-purge {language}".format(language=language))
+        if language not in supported_languages:
+            sudo("locale-gen {language}".format(language=language))
 
 
 #
