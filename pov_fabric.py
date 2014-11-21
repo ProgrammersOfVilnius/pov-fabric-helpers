@@ -6,6 +6,7 @@ import posixpath
 import subprocess
 import sys
 import tempfile
+import urlparse
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
 from fabric.api import run, sudo, quiet, settings, cd, env, abort, task, with_settings
@@ -17,11 +18,15 @@ from fabric.contrib.files import exists, append
 #
 
 # Produced by 'ssh-keyscan github.com'
-# Fingerprint from https://help.github.com/articles/what-are-github-s-ssh-key-fingerprints/
 GITHUB_SSH_HOST_KEY = "github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=="
+
+# Fingerprint from https://help.github.com/articles/what-are-github-s-ssh-key-fingerprints/
 GITHUB_SSH_HOST_KEY_FINGERPRINT = "16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48"
-# Verification procedure:
-# assert ssh_key_fingerprint(GITHUB_SSH_HOST_KEY) == GITHUB_SSH_HOST_KEY_FINGERPRINT
+
+# Known SSH host keys to be added to ~/.ssh/known_hosts if needed
+KNOWN_HOSTS = {
+    "github.com": GITHUB_SSH_HOST_KEY,
+}
 
 
 #
@@ -117,7 +122,7 @@ def ensure_known_host(host_key, known_hosts='/root/.ssh/known_hosts'):
     # flat in contains() with an error ("sudo: export: command not
     # found") that is silently suppressed, resulting in always appending
     # the ssh key to /root/.ssh/known_hosts.  Probably because I use
-    # `with settings(shell_env(LC_ALL='C.UTF-8')):`.
+    # `with shell_env(LC_ALL='C.UTF-8'):`.
     append(known_hosts, host_key, use_sudo=True, shell=True)
 
 
@@ -137,6 +142,35 @@ def ensure_user(user):
 # Git
 #
 
+def parse_git_repo(git_repo):
+    """Parse a git repository URL.
+
+    git-clone(1) lists these as examples of supported URLs:
+
+    - ssh://[user@]host.xz[:port]/path/to/repo.git/
+    - git://host.xz[:port]/path/to/repo.git/
+    - http[s]://host.xz[:port]/path/to/repo.git/
+    - ftp[s]://host.xz[:port]/path/to/repo.git/
+    - rsync://host.xz/path/to/repo.git/
+    - [user@]host.xz:path/to/repo.git/
+    - ssh://[user@]host.xz[:port]/~[user]/path/to/repo.git/
+    - git://host.xz[:port]/~[user]/path/to/repo.git/
+    - [user@]host.xz:/~[user]/path/to/repo.git/
+    - /path/to/repo.git/
+    - file:///path/to/repo.git/
+
+    This function doesn't support the <transport>::<address> syntax, and it
+    doesn't understand insteadOf shortcuts from ~/.gitconfig.
+    """
+    if '://' in git_repo:
+        return urlparse.urlparse(git_repo)
+    if ':' in git_repo:
+        netloc, colon, path = git_repo.partition(':')
+        return urlparse.ParseResult('ssh', netloc, path, '', '', '')
+    else:
+        return urlparse.ParseResult('file', '', git_repo, '', '', '')
+
+
 @with_settings(sudo_user='root')
 def git_clone(git_repo, work_dir, branch='master', force=False):
     """Clone a specified branch of the git repository into work_dir.
@@ -146,30 +180,37 @@ def git_clone(git_repo, work_dir, branch='master', force=False):
     If work_dir exists and force is True, performs a 'git fetch' followed by
     'git reset --hard origin/{branch}'.
 
-    Takes care to allow SSH agent forwarding to be used for authentication.
+    Takes care to allow SSH agent forwarding to be used for authentication,
+    if you use SSH.
+
+    Takes care to add the SSH host key to /root/.ssh/known_hosts, if you're
+    cloning from a host in KNOWN_HOSTS.
 
     Returns the commit hash of the version cloned.
     """
-    if 'github.com' in git_repo:
-        ensure_known_host(GITHUB_SSH_HOST_KEY)
-    # sudo removes SSH_AUTH_SOCK from the environment, so we can't make use of
-    # the ssh agent forwarding unless we cunningly preserve the envvar and sudo
-    # to root (because only root and the original user will be able to access
-    # the socket)
-    ssh_auth_sock = run("echo $SSH_AUTH_SOCK", quiet=True)
+    env = {}
+    url = parse_git_repo(git_repo)
+    if url.scheme == 'ssh':
+        host_key = KNOWN_HOSTS.get(url.hostname)
+        if host_key:
+            ensure_known_host(host_key)
+        # sudo removes SSH_AUTH_SOCK from the environment, so we can't make use
+        # of the ssh agent forwarding unless we cunningly preserve the envvar
+        # and sudo to root (because only root and the original user will be
+        # able to access the socket)
+        env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
     if exists(posixpath.join(work_dir, '.git')) and force:
-        with cd(work_dir):
-            sudo("SSH_AUTH_SOCK={ssh_auth_sock} git fetch".format(
-                ssh_auth_sock=ssh_auth_sock))
+        with cd(work_dir), settings(shell_env=env):
+            sudo("git fetch")
             sudo("git reset --hard origin/{branch}".format(branch=branch))
     else:
-        sudo("SSH_AUTH_SOCK={ssh_auth_sock} git clone -b branch {git_repo} {work_dir}".format(
-            ssh_auth_sock=ssh_auth_sock,
-            branch=branch,
-            git_repo=git_repo,
-            work_dir=work_dir))
+        with settings(shell_env=env):
+            sudo("git clone -b {branch} {git_repo} {work_dir}".format(
+                branch=branch,
+                git_repo=git_repo,
+                work_dir=work_dir))
     with cd(work_dir):
-        got_commit = sudo("git describe --always").strip()
+        got_commit = sudo("git describe --always", quiet=True).strip()
     return got_commit
 
 
