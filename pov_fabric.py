@@ -2,12 +2,26 @@
 Fabric helpers
 """
 
-import sys
 import posixpath
+import subprocess
+import sys
+import tempfile
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
 from fabric.api import run, sudo, quiet, settings, cd, env, abort, task, with_settings
 from fabric.contrib.files import exists, append
+
+
+#
+# Constants
+#
+
+# Produced by 'ssh-keyscan github.com'
+# Fingerprint from https://help.github.com/articles/what-are-github-s-ssh-key-fingerprints/
+GITHUB_SSH_HOST_KEY = "github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=="
+GITHUB_SSH_HOST_KEY_FINGERPRINT = "16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48"
+# Verification procedure:
+# assert ssh_key_fingerprint(GITHUB_SSH_HOST_KEY) == GITHUB_SSH_HOST_KEY_FINGERPRINT
 
 
 #
@@ -75,6 +89,19 @@ def install_packages(*packages, **kw):
     if not interactive:
         command = "DEBIAN_FRONTEND=noninteractive " + command
     sudo(command)
+
+
+def ssh_key_fingerprint(host_key):
+    """Compute the fingerprint of a public key."""
+    if not host_key.startswith('ssh-'):
+        host_key = host_key.split(None, 1)[1]
+    with tempfile.NamedTemporaryFile(prefix='pov-fabric-') as f:
+        f.write(host_key)
+        f.flush()
+        output = subprocess.check_output(['ssh-keygen', '-l', '-f', f.name])
+        # Example output:
+        # "2048 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48 /tmp/github_rsa.pub (RSA)\n"
+    return output.split()[1]
 
 
 def ensure_known_host(host_key, known_hosts='/root/.ssh/known_hosts'):
