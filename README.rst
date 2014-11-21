@@ -39,10 +39,9 @@ and in your ``fabfile.py`` add
 .. code:: python
 
   sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'pov-fabric-helpers'))
+  if not os.path.exists(os.path.join(sys.path[0], 'pov_fabric.py')):
+      sys.exit("Please run 'git submodule update --init'.")
   from pov_fabric import ...
-
-Then remind your users to run ``git submodule init`` after they clone the repo
-with the fabfile.
 
 
 Instance management
