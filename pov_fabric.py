@@ -200,8 +200,9 @@ def git_clone(git_repo, work_dir, branch='master', force=False):
         # able to access the socket)
         env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
     if exists(posixpath.join(work_dir, '.git')) and force:
-        with cd(work_dir), settings(shell_env=env):
-            sudo("git fetch")
+        with cd(work_dir):
+            with settings(shell_env=env):
+                sudo("git fetch")
             sudo("git reset --hard origin/{branch}".format(branch=branch))
     else:
         with settings(shell_env=env):
