@@ -335,7 +335,7 @@ def changelog_append(message, context=None):
 #
 
 
-class Instance(object):
+class Instance(dict):
     """Service instance configuration.
 
     Subclass to add more parameters, e.g. ::
@@ -351,20 +351,30 @@ class Instance(object):
     """
 
     def __init__(self, name, host, **kwargs):
+        # This trick lets us access dict keys as if they were object attributes
+        # and vice versa.
+        self.__dict__ = self
         self.name = name
         self.host = host
         self.__dict__.update(kwargs)
 
     def _asdict(self):
-        """Return the instance parameters as a dict.
+        """(DEPRECATED) Return the instance parameters as a dict.
 
         Useful for string formatting, e.g. ::
 
             print('{name} is on {host}'.format(**instance._asdict()))
 
+        but since now you can do ::
+
+            print('{name} is on {host}'.format(**instance))
+
+        this method is pointless and is retained for backwards compatibility
+        only.
+
         Mimics the API of ``collections.namedtuple``.
         """
-        return self.__dict__
+        return self
 
     REQUIRED = object()
 

@@ -55,3 +55,9 @@ def test_parse_git_repo():
     assert not r.username
     assert not r.hostname
     assert r.path == '~/git/repo.git'
+
+
+def test_Instance():
+    instance = Instance("test", "localhost")
+    assert "{name} on {host}".format(**instance) == "test on localhost"
+
