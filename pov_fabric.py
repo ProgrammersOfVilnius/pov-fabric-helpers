@@ -340,6 +340,21 @@ def changelog_append(message, context=None):
     changelog(message, context, append=True)
 
 
+def changelog_banner(message, context=None):
+    """Append a banner message to /root/Changelog"""
+    changelog("#\n  # %s\n  #" % message, context)
+
+
+def run_and_changelog(command):
+    """Run a command and also append it to /root/Changelog"""
+    changelog_append(command)
+    if env.user != 'root' or '@' in env.host_string:
+        # example use case: pov-fab -H vagrant@vagrantbox
+        sudo(command, user='root')
+    else:
+        run(command)
+
+
 #
 # Instance management
 #

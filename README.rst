@@ -19,6 +19,8 @@ A possibly-incomplete list of them:
 - ``ensure_postgresql_db("dbname", "owner")``
 - ``changelog("# Installing stuff")`` (requires pov-admin-tools_)
 - ``changelog_append("# more stuff")`` (requires pov-admin-tools_)
+- ``changelog_banner("Installing stuff")`` (requires pov-admin-tools_)
+- ``run_and_changelog("apt-get install stuff")`` (requires pov-admin-tools_)
 
 .. _pov-admin-tools: https://github.com/ProgrammersOfVilnius/pov-admin-tools
 
