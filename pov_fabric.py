@@ -246,7 +246,17 @@ def git_update(work_dir, branch='master', force=False):
     Returns the commit hash of the version fetched.
     """
     env = {}
-    env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
+    git_repo = run("git config --get remote.origin.url", quiet=True)
+    url = parse_git_repo(git_repo)
+    if url.scheme == 'ssh':
+        host_key = KNOWN_HOSTS.get(url.hostname)
+        if host_key:
+            ensure_known_host(host_key)
+        # sudo removes SSH_AUTH_SOCK from the environment, so we can't make use
+        # of the ssh agent forwarding unless we cunningly preserve the envvar
+        # and sudo to root (because only root and the original user will be
+        # able to access the socket)
+        env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
     with cd(work_dir):
         with settings(shell_env=env):
             sudo("git fetch")
