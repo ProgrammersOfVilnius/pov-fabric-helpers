@@ -322,14 +322,14 @@ def changelog(message, context=None, append=False, optional=True):
     If context is given, message will be formatted using given context
     (``message = message.format(**context)``).
     """
-    if exists('/usr/sbin/new-changelog-entry') or not optional:
+    if not optional or exists('/usr/sbin/new-changelog-entry') or exists('/usr/local/sbin/new-changelog-entry'):
         cmd = 'new-changelog-entry'
         if append:
             cmd += ' -a'
         if context is not None:
             message = message.format(**context)
         cmd += ' ' + quote(message).replace('\\', '\\\\')
-        sudo(cmd, user='root')
+        run_as_root(cmd)
 
 
 def changelog_append(message, context=None):
@@ -348,8 +348,13 @@ def changelog_banner(message, context=None):
 def run_and_changelog(command):
     """Run a command and also append it to /root/Changelog"""
     changelog_append(command)
-    if env.user != 'root' or '@' in env.host_string:
-        # example use case: pov-fab -H vagrant@vagrantbox
+    run_as_root(command)
+
+
+def run_as_root(command):
+    """Run a command as root; use sudo only if necessary."""
+    current_user = env.host_string.partition('@')[0] or env.user
+    if current_user != 'root':
         sudo(command, user='root')
     else:
         run(command)
