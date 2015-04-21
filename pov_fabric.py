@@ -328,7 +328,7 @@ def changelog(message, context=None, append=False, optional=True):
             cmd += ' -a'
         if context is not None:
             message = message.format(**context)
-        cmd += ' ' + quote(message).replace('\\', '\\\\')
+        cmd += ' ' + quote(message)
         run_as_root(cmd)
 
 
