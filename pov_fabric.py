@@ -126,17 +126,22 @@ def ensure_known_host(host_key, known_hosts='/root/.ssh/known_hosts'):
     append(known_hosts, host_key, use_sudo=True, shell=True)
 
 
-def ensure_user(user, changelog=False):
+def ensure_user(user, shell=None, changelog=False):
     """Create a system user if it doesn't exist already.
 
     This is idempotent: running it again won't add the same user again.
     """
     with quiet():
         if run("id {user}".format(user=user)).succeeded:
+            # XXX: check if shell matches what we asked, and run chsh if not?
             return
     doit = run_and_changelog if changelog else sudo
     with settings(sudo_user="root"):
-        doit("adduser --system --group --disabled-password --quiet %s" % user)
+        command = ['adduser --quiet --system --group --disabled-password']
+        if shell:
+            command.append('--shell=%s' % shell)
+        command.append(user)
+        doit(" ".join(command))
 
 
 def ensure_locales(*languages):
