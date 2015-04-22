@@ -345,9 +345,9 @@ def changelog_banner(message, context=None):
     changelog("#\n  # %s\n  #" % message, context)
 
 
-def run_and_changelog(command):
+def run_and_changelog(command, append=True):
     """Run a command and also append it to /root/Changelog"""
-    changelog_append(command)
+    changelog(command, append=append)
     run_as_root(command)
 
 
