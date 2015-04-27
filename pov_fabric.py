@@ -4,6 +4,7 @@ Fabric helpers
 
 import posixpath
 import subprocess
+import string
 import sys
 import tempfile
 import urlparse
@@ -45,6 +46,29 @@ def asbool(v):
 # System management helpers
 #
 
+def assert_shell_safe(*args, **kw):
+    """Check that each argument can be passed to shell safely.
+
+    This is ultra-paranoid mode: only a small set of whitelisted characters are
+    allowed.  No spaces, no leading dashes, no glob wildcards, no quotes, no
+    backticks, no dollar signs, no history expansion, no brace expansion.
+
+    Tilde expansion is allowed.
+
+    It might be too strict.  Therefore you can supply a keyword-only argument
+    ``extra_allow`` that lists additional characters to be allowed.
+    """
+    extra_allow = kw.pop('extra_allow', '')
+    if kw:
+        raise TypeError('unexpected keyword arguments: {}'
+                        .format(', '.join(sorted(kw))))
+    allowed_chars = set(string.letters + string.digits + '/-._~')
+    allowed_chars.update(extra_allow)
+    for arg in args:
+        if not set(arg) <= allowed_chars or arg.startswith('-'):
+            raise ValueError('{} is not safe for shell'.format(arg))
+
+
 def ensure_apt_not_outdated():
     """Make sure apt-get update was run within the last day."""
     if not run("find /var/lib/apt/lists -maxdepth 0 -mtime -1", quiet=True):
@@ -53,6 +77,7 @@ def ensure_apt_not_outdated():
 
 def package_installed(package):
     """Check if the specified packages is installed."""
+    assert_shell_safe(package)
     # XXX: doing this in a loop is slow :(
     with quiet():
         status = run("dpkg-query -W --showformat='${Status}' %s" % package)
@@ -95,6 +120,8 @@ def install_packages(*packages, **kw):
     if not packages:
         return
     ensure_apt_not_outdated()
+    for package in packages:
+        assert_shell_safe(package)
     command = "apt-get install -qq -y %s" % " ".join(packages)
     if not interactive:
         command = "DEBIAN_FRONTEND=noninteractive " + command
@@ -130,6 +157,7 @@ def ensure_known_host(host_key, known_hosts='/root/.ssh/known_hosts'):
 
     This is idempotent: running it again won't add the same key again.
     """
+    assert_shell_safe(known_hosts)
     if not exists(known_hosts, use_sudo=True):
         if not exists(posixpath.dirname(known_hosts), use_sudo=True):
             sudo('install -d -m700 %s' % posixpath.dirname(known_hosts))
@@ -147,6 +175,7 @@ def ensure_user(user, shell=None, changelog=False):
 
     This is idempotent: running it again won't add the same user again.
     """
+    assert_shell_safe(user, shell or '')
     with quiet():
         if run("id {user}".format(user=user)).succeeded:
             # XXX: check if shell matches what we asked, and run chsh if not?
@@ -168,6 +197,7 @@ def ensure_locales(*languages):
         ensure_locales('en', 'lt')
 
     """
+    assert_shell_safe(*languages)
     supported_locales = run("locale -a", quiet=True).splitlines()
     # as a shortcut we'll assume that if one xx_... locale is supported
     # then all of them are supported
@@ -228,6 +258,8 @@ def git_clone(git_repo, work_dir, branch='master', force=False):
 
     Returns the commit hash of the version cloned.
     """
+    assert_shell_safe(git_repo, extra_allow='@:')
+    assert_shell_safe(work_dir, branch)
     env = {}
     url = parse_git_repo(git_repo)
     if url.scheme == 'ssh':
@@ -267,6 +299,7 @@ def git_update(work_dir, branch='master', force=False):
 
     Returns the commit hash of the version fetched.
     """
+    assert_shell_safe(work_dir, branch)
     env = {}
     git_repo = run("git config --get remote.origin.url", quiet=True)
     url = parse_git_repo(git_repo)
@@ -296,6 +329,7 @@ def git_update(work_dir, branch='master', force=False):
 
 def postgresql_user_exists(user):
     """Check if a postgresql user already exists."""
+    assert_shell_safe(user)
     out = sudo("psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname = '%s'\"" % user,
                user='postgres', quiet=True)
     return bool(out)
@@ -306,12 +340,14 @@ def ensure_postgresql_user(user):
 
     This is idempotent: running it again won't add the same user again.
     """
+    assert_shell_safe(user)
     if not postgresql_user_exists(user):
         sudo("LC_ALL=C.UTF-8 createuser -DRS %s" % user, user='postgres')
 
 
 def postgresql_db_exists(dbname):
     """Check if a PostgreSQL database already exists."""
+    assert_shell_safe(dbname)
     out = sudo("psql -tAc \"SELECT 1 FROM pg_database WHERE datname = '%s'\"" % dbname,
                user='postgres', quiet=True)
     return bool(out)
@@ -322,6 +358,7 @@ def ensure_postgresql_db(dbname, owner):
 
     This is idempotent: running it again won't create the database again.
     """
+    assert_shell_safe(dbname)
     if not postgresql_db_exists(dbname):
         sudo("LC_ALL=C.UTF-8 createdb -E utf-8 -T template0 -O %s %s" % (owner, dbname),
              user='postgres')
@@ -344,6 +381,7 @@ def changelog(message, context=None, append=False, optional=True):
     If context is given, message will be formatted using given context
     (``message = message.format(**context)``).
     """
+    # NB: no assert_shell_safe(): quote() ought to take care of everything.
     if not optional or exists('/usr/sbin/new-changelog-entry') or exists('/usr/local/sbin/new-changelog-entry'):
         cmd = 'new-changelog-entry'
         if append:
