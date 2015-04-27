@@ -89,6 +89,7 @@ def install_packages(*packages, **kw):
     if len(packages) == 1 and not isinstance(packages[0], str):
         # handle lists and tuples
         packages = packages[0]
+    packages = " ".join(packages).split()
     if missing_only:
         packages = [p for p in packages if not package_installed(p)]
     if not packages:
