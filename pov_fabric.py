@@ -76,9 +76,13 @@ def install_packages(*packages, **kw):
     - ``interactive`` (default: False) -- allow interactive prompts during
       package installation.
 
+    - ``changelog`` (default: False) -- record installed packages in
+      /root/Changelog
+
     """
     missing_only = kw.pop('missing_only', False)
     interactive = kw.pop('interactive', False)
+    changelog = kw.pop('changelog', False)
     if kw:
         raise TypeError('unexpected keyword arguments: {}'
                         .format(', '.join(sorted(kw))))
@@ -93,6 +97,8 @@ def install_packages(*packages, **kw):
     command = "apt-get install -qq -y %s" % " ".join(packages)
     if not interactive:
         command = "DEBIAN_FRONTEND=noninteractive " + command
+    if changelog:
+        changelog_append("apt-get install %s" % " ".join(packages))
     sudo(command)
 
 
