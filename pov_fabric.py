@@ -275,7 +275,8 @@ def parse_git_repo(git_repo):
 
 
 @with_settings(sudo_user='root')
-def git_clone(git_repo, work_dir, branch='master', force=False):
+def git_clone(git_repo, work_dir, branch='master', force=False,
+              changelog=False):
     """Clone a specified branch of the git repository into work_dir.
 
     If work_dir exists and force is False (default), aborts.
@@ -304,19 +305,24 @@ def git_clone(git_repo, work_dir, branch='master', force=False):
         # and sudo to root (because only root and the original user will be
         # able to access the socket)
         env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
+    doit = run_and_changelog if changelog else sudo
     if exists(posixpath.join(work_dir, '.git')) and force:
         with cd(work_dir):
             with settings(shell_env=env):
+                if changelog:
+                    changelog_append('cd {work_dir} && git fetch'.format(work_dir=work_dir))
                 sudo("git fetch")
-            sudo("git reset --hard origin/{branch}".format(branch=branch))
+            doit("git reset --hard origin/{branch}".format(branch=branch))
     else:
         with settings(shell_env=env):
-            sudo("git clone -b {branch} {git_repo} {work_dir}".format(
+            doit("git clone -b {branch} {git_repo} {work_dir}".format(
                 branch=branch,
                 git_repo=git_repo,
                 work_dir=work_dir))
     with cd(work_dir):
         got_commit = sudo("git describe --always --dirty", quiet=True).strip()
+    if changelog:
+        changelog_append('# got commit {sha}'.format(sha=got_commit))
     return got_commit
 
 
