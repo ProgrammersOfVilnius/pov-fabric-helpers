@@ -11,7 +11,7 @@ import urlparse
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
 from fabric.api import run, sudo, quiet, settings, cd, env, abort, task, with_settings
-from fabric.contrib.files import exists, append
+from fabric.contrib.files import exists, append, upload_template
 
 
 #
@@ -206,6 +206,39 @@ def ensure_locales(*languages):
     for language in languages:
         if language not in supported_languages:
             sudo("locale-gen {language}".format(language=language))
+
+
+def generate_file(template, filename, context=None, use_jinja=False,
+                  mode=0o644, owner="root:root", changelog_append=True):
+    """Generate a file from a template
+
+    Generates ``filename`` on the remote server using ``template`` as a source.
+    The syntax depends on ``use_jinja``: either Jinja2 (if True) or Python's
+    builtin string formatting (of the older, ``%(name)s`` variety).
+    ``context`` should be a dict containing variables for interpolation.
+
+    Changes the file ownership and mode.
+
+    Creates the parent directory automatically if it doesn't exist (owned by
+    root, mode 0755).
+
+    If ``changelog_append`` is True, calls changelog_append() to note that
+    ``filename`` was generated.
+    """
+    assert_shell_safe(filename)
+    destdir = posixpath.dirname(filename)
+    if not exists(destdir, use_sudo=True):
+        sudo('install -d {destdir}'.format(destdir=destdir))
+    changelog('# generated {filename}'.format(filename=filename),
+              append=changelog_append)
+    upload_template(template, filename, context=context, use_jinja=use_jinja,
+                    mode=mode, use_sudo=True)
+    if use_jinja:
+        # some kind of a bug in Jinja2 eats the trailing newline in the file
+        sudo('echo >> {filename}'.format(filename=filename))
+    if owner is not None:
+        assert_shell_safe(*owner.split(':'))
+        sudo("chown {owner} {filename}".format(owner=owner, filename=filename))
 
 
 #
