@@ -103,6 +103,15 @@ def install_packages(*packages, **kw):
     sudo(command)
 
 
+def install_missing_packages(*packages, **kw):
+    """Install missing system packages.
+
+    Alias for install_packages(*packages, missing_only=True, **kw).
+    """
+    kw.setdefault('missing_only', True)
+    install_packages(*packages, **kw)
+
+
 def ssh_key_fingerprint(host_key):
     """Compute the fingerprint of a public key."""
     if not host_key.startswith('ssh-'):
