@@ -159,8 +159,7 @@ def ensure_known_host(host_key, known_hosts='/root/.ssh/known_hosts'):
     """
     assert_shell_safe(known_hosts)
     if not exists(known_hosts, use_sudo=True):
-        if not exists(posixpath.dirname(known_hosts), use_sudo=True):
-            sudo('install -d -m700 %s' % posixpath.dirname(known_hosts))
+        ensure_directory(posixpath.dirname(known_hosts), mode=0o700)
         sudo('touch %s' % known_hosts)
     # Must use shell=True to work around Fabric bug, where it would fall
     # flat in contains() with an error ("sudo: export: command not
@@ -208,6 +207,17 @@ def ensure_locales(*languages):
             sudo("locale-gen {language}".format(language=language))
 
 
+def ensure_directory(pathname, mode=None):
+    """Make sure directory exists."""
+    assert_shell_safe(pathname, mode or '')
+    if not exists(pathname, use_sudo=True):
+        command = ['install -d']
+        if mode:
+            command.append('-m{}'.format(mode))
+        command.append(pathname)
+        sudo(' '.join(command))
+
+
 def generate_file(template, filename, context=None, use_jinja=False,
                   mode=0o644, owner="root:root", changelog_append=True):
     """Generate a file from a template
@@ -226,9 +236,7 @@ def generate_file(template, filename, context=None, use_jinja=False,
     ``filename`` was generated.
     """
     assert_shell_safe(filename)
-    destdir = posixpath.dirname(filename)
-    if not exists(destdir, use_sudo=True):
-        sudo('install -d {destdir}'.format(destdir=destdir))
+    ensure_directory(posixpath.dirname(filename))
     changelog('# generated {filename}'.format(filename=filename),
               append=changelog_append)
     upload_template(template, filename, context=context, use_jinja=use_jinja,
