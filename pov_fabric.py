@@ -301,7 +301,8 @@ def git_update(work_dir, branch='master', force=False):
     """
     assert_shell_safe(work_dir, branch)
     env = {}
-    git_repo = run("git config --get remote.origin.url", quiet=True)
+    with cd(work_dir):
+        git_repo = run("git config --get remote.origin.url", quiet=True)
     url = parse_git_repo(git_repo)
     if url.scheme == 'ssh':
         host_key = KNOWN_HOSTS.get(url.hostname)
