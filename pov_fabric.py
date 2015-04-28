@@ -351,6 +351,13 @@ def git_update(work_dir, branch='master', force=False, changelog=False):
     assert_shell_safe(work_dir, branch)
     env = {}
     with cd(work_dir):
+        tracking_branch = run("git rev-parse --symbolic-full-name 'HEAD@{u}'")
+        if not tracking_branch.startswith("refs/remotes/origin/"):
+            abort("{} is not tracking a branch from remote 'origin'".format(work_dir))
+        tracking_branch = tracking_branch[len("refs/remotes/origin/"):]
+        if tracking_branch != branch:
+            abort("{} is not tracking branch {} (it's tracking {})".format(
+                work_dir, branch, tracking_branch))
         git_repo = run("git config --get remote.origin.url", quiet=True)
     url = parse_git_repo(git_repo)
     if url.scheme == 'ssh':
