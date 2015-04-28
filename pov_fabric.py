@@ -315,20 +315,15 @@ def git_clone(git_repo, work_dir, branch='master', force=False,
         # and sudo to root (because only root and the original user will be
         # able to access the socket)
         env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
+    if exists(posixpath.join(work_dir, '.git')):
+        return git_update(work_dir, branch=branch, force=force,
+                          changelog=changelog, verify_remote_url=git_repo)
     doit = run_and_changelog if changelog else sudo
-    if exists(posixpath.join(work_dir, '.git')) and force:
-        with cd(work_dir):
-            with settings(shell_env=env):
-                if changelog:
-                    changelog_append('cd {work_dir} && git fetch'.format(work_dir=work_dir))
-                sudo("git fetch")
-            doit("git reset --hard origin/{branch}".format(branch=branch))
-    else:
-        with settings(shell_env=env):
-            doit("git clone -b {branch} {git_repo} {work_dir}".format(
-                branch=branch,
-                git_repo=git_repo,
-                work_dir=work_dir))
+    with settings(shell_env=env):
+        doit("git clone -b {branch} {git_repo} {work_dir}".format(
+            branch=branch,
+            git_repo=git_repo,
+            work_dir=work_dir))
     with cd(work_dir):
         got_commit = sudo("git describe --always --dirty", quiet=True).strip()
     if changelog:
