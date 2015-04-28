@@ -10,7 +10,9 @@ import tempfile
 import urlparse
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
-from fabric.api import run, sudo, quiet, settings, cd, env, abort, task, with_settings
+from fabric.api import (
+    run, sudo, quiet, settings, cd, env, abort, task, with_settings, put
+)
 from fabric.contrib.files import exists, append, upload_template
 
 
@@ -410,6 +412,91 @@ def ensure_postgresql_db(dbname, owner):
     if not postgresql_db_exists(dbname):
         sudo("LC_ALL=C.UTF-8 createdb -E utf-8 -T template0 -O %s %s" % (owner, dbname),
              user='postgres')
+
+
+#
+# Postfix
+#
+
+def install_postfix_virtual_table(local, remote, changelog_append=True):
+    """Upload a Postfix virtual table and install it.
+
+    Takes care of
+    - uploading the local file to remote
+    - file permissions and ownership (0644, root:root)
+    - running postmap
+    - adding the table to /etc/postfix/main.cf virtual_maps
+    - making sure that postfix accepts outside connections
+      (inet_interfaces != loopback-only)
+    - changelog updates for all of the above
+
+    If ``changelog_append`` is False creates a new timestamped header.
+    If it's True, appends to the current message.
+    """
+    assert_shell_safe(remote)
+    changelog('# Updating {remote}'.format(remote=remote),
+              append=changelog_append)
+    put(local, remote, use_sudo=True, mode=0o644)
+    sudo("chown root:root {remote}".format(remote=remote))
+    run_and_changelog("postmap {remote}".format(remote=remote))
+    add_postfix_virtual_map('hash:' + remote)
+    make_postfix_public()
+
+
+def get_postfix_setting(setting):
+    """Get the current value of a postfix setting"""
+    assert_shell_safe(setting)
+    with quiet():
+        current_setting = run("postconf -h {setting}".format(setting=setting))
+    if current_setting.startswith('postconf: warning:'):
+        # assume "postconf: warning: {setting}: unknown parameter"
+        current_setting = ''
+    return current_setting
+
+
+def parse_virtual_maps(current_setting):
+    """Parse a postfix 'virtual_maps' setting.
+
+    Returns a list of (non-empty) strings.
+    """
+    return filter(None, map(str.strip, current_setting.split(',')))
+
+
+def add_postfix_virtual_map(entry):
+    """Add an entry to postfix's virtual_maps.
+
+    Takes care to
+    - preserve preexisting virtual maps
+    - reload postfix's configurationa after changing it
+    - document all the changes in the changelog
+
+    Idempotent: does nothing if entry is already included in virtual_maps.
+    """
+    assert_shell_safe(entry, extra_allow=':')
+    current_setting = get_postfix_setting('virtual_maps')
+    virtual_maps = parse_virtual_maps(current_setting)
+    if entry not in virtual_maps:
+        virtual_maps.append(entry)
+        new_setting = ', '.join(virtual_maps)
+        if "'" in new_setting:
+            abort("Cannot handle apostrophes in virtual_maps setting (%s), not touching anything!" % current_setting)
+        changelog_append('# adding {entry} to virtual_maps in /etc/postfix/main.cf'.format(entry=entry))
+        run_and_changelog("postconf virtual_maps='%s'" % new_setting)
+        run_and_changelog("postfix reload")
+
+
+def make_postfix_public():
+    """Make sure postfix accepts connections from outside.
+
+    Takes care to
+    - restart postfix if necessary
+    - document all the changes in the changelog
+    """
+    with quiet():
+        current_setting = run("postconf -h inet_interfaces")
+    if current_setting == 'loopback-only':
+        run_and_changelog("postconf inet_interfaces=all")
+        run_and_changelog("service postfix restart")
 
 
 #
