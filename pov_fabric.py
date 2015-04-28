@@ -415,6 +415,35 @@ def ensure_postgresql_db(dbname, owner):
 
 
 #
+# Apache
+#
+
+def install_apache_website(apache_conf_template, domain, context=None,
+                           use_jinja=False):
+    """Upload Apache config for a website and enable it.
+
+    Takes care of
+    - generating an apache config file template from ``apache_conf_template``
+    - uploading it to /etc/apache2/sites-available/{domain}.conf
+    - file permissions and ownership (0644, root:root)
+    - creating a directory for logs (/var/log/apache2/{domain})
+    - enabling the website with a2ensite
+    - reloading apache
+
+    Caveats:
+    - assumes the Apache template configures logs in /var/log/apache2/{domain}
+    - assumes any other files (such as SSL certificates and keys) required for
+      the Apache config to work are already uploaded
+    """
+    generate_file(apache_conf_template,
+                  '/etc/apache2/sites-available/{}.conf'.format(domain),
+                  context=context, use_jinja=use_jinja)
+    ensure_directory('/var/log/apache2/{}'.format(domain))
+    run_and_changelog("a2ensite {}.conf".format(domain))
+    run_and_changelog("service apache2 reload")
+
+
+#
 # Postfix
 #
 
