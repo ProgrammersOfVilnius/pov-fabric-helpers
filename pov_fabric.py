@@ -618,10 +618,10 @@ class Instance(dict):
 
         Usage example::
 
-            from pov_fabric import Instance
+            from pov_fabric import Instance as BaseInstance
 
-            Instance = Instance.with_params(
-                required_arg1=Instance.REQUIRED,
+            Instance = BaseInstance.with_params(
+                required_arg1=BaseInstance.REQUIRED,
                 optional_arg1='default value',
                 optional_arg2=None)
 
