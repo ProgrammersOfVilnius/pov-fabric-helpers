@@ -369,18 +369,16 @@ def git_update(work_dir, branch='master', force=False, changelog=False):
         # and sudo to root (because only root and the original user will be
         # able to access the socket)
         env['SSH_AUTH_SOCK'] = run("echo $SSH_AUTH_SOCK", quiet=True)
-    if changelog:
-        changelog_append('cd {work_dir} && git fetch'.format(work_dir=work_dir))
-        doit = run_and_changelog
-    else:
-        doit = sudo
     with cd(work_dir):
         with settings(shell_env=env):
             sudo("git fetch")
         if force:
-            doit("git reset --hard origin/{branch}".format(branch=branch))
+            changelog_append('cd {work_dir} && git fetch && git reset --hard origin/{branch}'.format(
+                work_dir=work_dir, branch=branch))
+            sudo("git reset --hard origin/{branch}".format(branch=branch))
         else:
-            doit("git merge --ff-only origin/{branch}".format(branch=branch))
+            changelog_append('cd {work_dir} && git pull --ff-only'.format(work_dir=work_dir))
+            sudo("git merge --ff-only origin/{branch}".format(branch=branch))
         got_commit = sudo("git describe --always --dirty", quiet=True).strip()
     if changelog:
         changelog_append('# got commit {sha}'.format(sha=got_commit))
