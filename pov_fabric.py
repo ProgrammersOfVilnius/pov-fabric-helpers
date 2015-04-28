@@ -337,7 +337,8 @@ def git_clone(git_repo, work_dir, branch='master', force=False,
 
 
 @with_settings(sudo_user='root')
-def git_update(work_dir, branch='master', force=False, changelog=False):
+def git_update(work_dir, branch='master', force=False, changelog=False,
+               verify_remote_url=None):
     """Update a specified git checkout.
 
     Aborts if the checkout cannot be fast-forwarded to the specified branch,
@@ -359,6 +360,9 @@ def git_update(work_dir, branch='master', force=False, changelog=False):
             abort("{} is not tracking branch {} (it's tracking {})".format(
                 work_dir, branch, tracking_branch))
         git_repo = run("git config --get remote.origin.url", quiet=True)
+        if verify_remote_url and git_repo != verify_remote_url:
+            abort("{} is not tracking the right remote {} (it's tracking {})".format(
+                work_dir, verify_remote_url, git_repo))
     url = parse_git_repo(git_repo)
     if url.scheme == 'ssh':
         host_key = KNOWN_HOSTS.get(url.hostname)
