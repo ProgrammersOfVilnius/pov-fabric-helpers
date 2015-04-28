@@ -473,6 +473,11 @@ def add_postfix_virtual_map(entry):
     Idempotent: does nothing if entry is already included in virtual_maps.
     """
     assert_shell_safe(entry, extra_allow=':')
+    current_setting = get_postfix_setting('virtual_alias_maps')
+    if current_setting != '$virtual_maps':
+        # TBH maybe we should ignore the legacy $virtual_maps and instead
+        # just use $virtual_alias_maps?
+        abort("Unexpected virtual_alias_maps setting ({})".format(current_setting))
     current_setting = get_postfix_setting('virtual_maps')
     virtual_maps = parse_virtual_maps(current_setting)
     if entry not in virtual_maps:
@@ -481,7 +486,11 @@ def add_postfix_virtual_map(entry):
         if "'" in new_setting:
             abort("Cannot handle apostrophes in virtual_maps setting (%s), not touching anything!" % current_setting)
         changelog_append('# adding {entry} to virtual_maps in /etc/postfix/main.cf'.format(entry=entry))
-        run_and_changelog("postconf virtual_maps='%s'" % new_setting)
+        res = run_and_changelog("postconf virtual_maps='%s'" % new_setting)
+        if res.startswith("postconf: warning:"):
+            # Uhh on Ubuntu 10.04 postconf can't handle non-standard variables at all
+            changelog_append("  | %s" % res.rstrip())
+            abort("Your version of postconf ignores unknown settings; you'll have to edit /etc/postfix/main.cf and reload postfix manually.")
         run_and_changelog("postfix reload")
 
 
@@ -543,16 +552,16 @@ def changelog_banner(message, context=None):
 def run_and_changelog(command, append=True):
     """Run a command and also append it to /root/Changelog"""
     changelog(command, append=append)
-    run_as_root(command)
+    return run_as_root(command)
 
 
 def run_as_root(command):
     """Run a command as root; use sudo only if necessary."""
     current_user = env.host_string.partition('@')[0] or env.user
     if current_user != 'root':
-        sudo(command, user='root')
+        return sudo(command, user='root')
     else:
-        run(command)
+        return run(command)
 
 
 #
