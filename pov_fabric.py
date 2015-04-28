@@ -655,6 +655,20 @@ class Instance(dict):
         _define_instance(instance)
         _define_instance_task(instance.name, stacklevel=2)
 
+    @classmethod
+    def define_alias(cls, alias, name):
+        """Define an alias for an instance.
+
+        Defines an instance selector task named ``alias`` that selects an
+        instance named ``name``.
+
+        Usage example::
+
+            Instance.define_alias('prod', 'srv1.example.com')
+
+        """
+        _define_instance_task(alias, name, stacklevel=2)
+
 
 def _define_instance(instance):
     """Define an instance.
@@ -669,14 +683,16 @@ def _define_instance(instance):
     env.instances[instance.name] = instance
 
 
-def _define_instance_task(name, stacklevel=1):
+def _define_instance_task(name, instance_name=None, stacklevel=1):
     """Define an instance task
 
     This task will set env.instance to the name of the task.
     """
+    if instance_name is None:
+        instance_name = name
     def fn():
-        env.instance = name
-    fn.__doc__ = """Select instance '%s' for subsequent tasks.""" % name
+        env.instance = instance_name
+    fn.__doc__ = """Select instance '%s' for subsequent tasks.""" % instance_name
     instance_task = task(name=name)(fn)
     sys._getframe(stacklevel).f_globals[name.replace('-', '_')] = instance_task
 
