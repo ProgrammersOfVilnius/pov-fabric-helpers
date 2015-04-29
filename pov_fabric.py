@@ -597,7 +597,7 @@ def install_postfix_virtual_table(local, remote, changelog_append=True):
     If it's True, appends to the current message.
     """
     assert_shell_safe(remote)
-    changelog('# Updating {remote}'.format(remote=remote),
+    changelog('# updated {remote}'.format(remote=remote),
               append=changelog_append)
     put(local, remote, use_sudo=True, mode=0o644)
     sudo("chown root:root {remote}".format(remote=remote))
