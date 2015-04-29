@@ -251,6 +251,13 @@ def generate_file(template, filename, context=None, use_jinja=False,
         sudo("chown {owner} {filename}".format(owner=owner, filename=filename))
 
 
+def download_file(filename, url):
+    """Download a file from a given URL."""
+    assert_shell_safe(filename)
+    assert_shell_safe(url, extra_allow=':')
+    run_and_changelog('wget {url} -O {filename}'.format(url=url, filename=filename))
+
+
 #
 # Git
 #
