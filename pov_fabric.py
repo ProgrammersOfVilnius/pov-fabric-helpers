@@ -7,7 +7,9 @@ import subprocess
 import string
 import sys
 import tempfile
+import textwrap
 import urlparse
+from cStringIO import StringIO
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
 from fabric.api import (
@@ -459,6 +461,120 @@ def install_apache_website(apache_conf_template, domain, context=None,
     ensure_directory('/var/log/apache2/{}'.format(domain))
     run_and_changelog("a2ensite {}.conf".format(domain))
     run_and_changelog("service apache2 reload")
+
+
+#
+# OpenSSL
+#
+
+STARTSSL_INTERMEDIATE_URL = 'https://www.startssl.com/certs/sub.class1.server.ca.pem'
+
+# A test on 2015-04-29 shows that STARTSSL_INTERMEDIATE_URL gives you the same
+# certificate as STARTSSL_INTERMEDIATE_SHA2_URL.
+STARTSSL_INTERMEDIATE_SHA1_URL = 'https://www.startssl.com/certs/class1/sha1/pem/sub.class1.server.sha1.ca.pem'
+STARTSSL_INTERMEDIATE_SHA2_URL = 'https://www.startssl.com/certs/class1/sha2/pem/sub.class1.server.sha2.ca.pem'
+
+
+def ensure_ssl_key(ssl_key, ssl_csr, ssl_conf, ssl_cert, ssl_intermediate_cert,
+                   ssl_intermediate_cert_url, ssl_options):
+    """Make sure an SSL certificate exists.
+
+    - ``ssl_key``: filename of the private key (will be generated if missing)
+    - ``ssl_csr``: filename of the certificate signing request (will be
+      generated if needed)
+    - ``ssl_conf``: filename of the ssl configuration file (will be generated
+      using ``ssl_options`` if needed and missing)
+    - ``ssl_cert``: filename of the SSL certificate (alas this one cannot be
+      generated automatically)
+    - ``ssl_intermediate_cert``: filename of the SSL intermediate certificate
+      (will be downloaded if missing)
+    - ``ssl_intermediate_cert_url``: URL for downloading the intermediate
+      certificate (e.g. STARTSSL_INTERMEDIATE_URL)
+    - ``ssl_options``: a dictionary defining SSL certificate signing request
+       generation options, specifically, the arguments to be passed to
+       ``generate_ssl_config()`` -- country, state, locality, organization,
+       organizational_unit, common_name, and email.
+
+    """
+    if not exists(ssl_key, use_sudo=True):
+        if not exists(ssl_conf):
+            generate_ssl_config(ssl_conf, **ssl_options)
+        generate_ssl_key(ssl_key, ssl_csr, ssl_conf)
+    if not exists(ssl_csr):
+        if not exists(ssl_conf):
+            generate_ssl_config(ssl_conf, **ssl_options)
+        generate_ssl_csr(ssl_key, ssl_csr, ssl_conf)
+    if not exists(ssl_intermediate_cert):
+        download_file(ssl_intermediate_cert, ssl_intermediate_cert_url)
+    if not exists(ssl_cert):
+        changelog_append('# aborting: {ssl_cert} is missing'.format(ssl_cert=ssl_cert))
+        with quiet():
+            csr = run('cat {ssl_csr}'.format(ssl_csr=ssl_csr))
+        abort("{ssl_cert} is missing, please generate it using {ssl_csr}:\n\n{csr}".format(
+            ssl_cert=ssl_cert, ssl_csr=ssl_csr, csr=csr))
+
+
+def generate_ssl_config(conffile, country, state, locality, organization,
+                        organizational_unit, common_name, email):
+    """Generate a config file for SSL certificates.
+
+    Example::
+
+        generate_ssl_config('/etc/pov/sslreq.conf',
+                            country='LT', state='.', locality='Vilnius',
+                            organization='POV', organizational_unit='.',
+                            common_name='www.example.com',
+                            email='root@example.com')
+
+    """
+    assert_shell_safe(conffile)
+    config = textwrap.dedent("""\
+        [ req ]
+        default_bits           = 2048
+        default_keyfile        = privkey.pem
+        distinguished_name     = req_distinguished_name
+        prompt                 = no
+
+        [ req_distinguished_name ]
+        countryName            = {country}
+        stateOrProvinceName    = {state}
+        localityName           = {locality}
+        organizationName       = {organization}
+        organizationalUnitName = {organizational_unit}
+        commonName             = {common_name}
+        emailAddress           = {email}
+    """).format(country=country, state=state, locality=locality,
+               organization=organization,
+               organizational_unit=organizational_unit,
+               common_name=common_name, email=email)
+    changelog_append("# generated {conffile}".format(conffile=conffile))
+    put(StringIO(config), conffile, use_sudo=True, mode=0o644)
+    sudo("chown root:root {conffile}".format(conffile=conffile))
+
+
+def generate_ssl_key(keyfile, csrfile, conffile):
+    """Generate a new private SSL key and certificate signing request.
+
+    Uses modern defaults for 2015: 2048-bit RSA, SHA-256 signature.
+    """
+    assert_shell_safe(keyfile, csrfile, conffile)
+    changelog_append("# generated {keyfile} and {csrfile}".format(
+        keyfile=keyfile, csrfile=csrfile))
+    sudo("openssl req -config {conffile} -newkey rsa:2048 -nodes"
+         " -keyout {keyfile} -sha256 -out {csrfile}".format(
+             keyfile=keyfile, csrfile=csrfile, conffile=conffile))
+
+
+def generate_ssl_csr(keyfile, csrfile, conffile):
+    """Generate a new certificate signing request for a given SSL private key.
+
+    Uses modern defaults for 2015: SHA-256 signature.
+    """
+    assert_shell_safe(keyfile, csrfile, conffile)
+    changelog_append("# generated {csrfile}".format(csrfile=csrfile))
+    sudo("openssl req -config {conffile} -new -key {keyfile} -sha256"
+         " -out {csrfile}".format(
+             keyfile=keyfile, csrfile=csrfile, conffile=conffile))
 
 
 #
