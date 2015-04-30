@@ -617,8 +617,8 @@ def get_postfix_setting(setting):
     return current_setting
 
 
-def parse_virtual_maps(current_setting):
-    """Parse a postfix 'virtual_maps' setting.
+def parse_postfix_setting(current_setting):
+    """Parse a comma-separated postfix setting.
 
     Returns a list of (non-empty) strings.
     """
@@ -641,20 +641,45 @@ def add_postfix_virtual_map(entry):
         # TBH maybe we should ignore the legacy $virtual_maps and instead
         # just use $virtual_alias_maps?
         abort("Unexpected virtual_alias_maps setting ({})".format(current_setting))
-    current_setting = get_postfix_setting('virtual_maps')
-    virtual_maps = parse_virtual_maps(current_setting)
-    if entry not in virtual_maps:
-        virtual_maps.append(entry)
-        new_setting = ', '.join(virtual_maps)
-        if "'" in new_setting:
-            abort("Cannot handle apostrophes in virtual_maps setting (%s), not touching anything!" % current_setting)
-        changelog_append('# adding {entry} to virtual_maps in /etc/postfix/main.cf'.format(entry=entry))
-        res = run_and_changelog("postconf virtual_maps='%s'" % new_setting)
+    add_postfix_setting('virtual_maps', entry)
+
+
+def add_postfix_setting(setting, entry, reload_postfix=True):
+    """Add an entry to a comma-separated postfix setting.
+
+    Takes care to
+    - preserve preexisting values
+    - reload postfix's configuration after changing it
+    - document all the changes in the changelog
+
+    Idempotent: does nothing if entry is already included in the setting.
+
+    Returns True if the setting was modified, False if it was untouched.
+    """
+    assert_shell_safe(setting)
+    assert_shell_safe(entry, extra_allow=':')
+    old_value = get_postfix_setting(setting)
+    items = parse_postfix_setting(old_value)
+    if entry in items:
+        return False
+    else:
+        items.append(entry)
+        new_value = ', '.join(items)
+        if "'" in new_value:
+            abort("Cannot handle apostrophes in {setting} setting ({old_value}),"
+                  " not touching anything!".format(setting=setting,
+                                                   old_value=old_value))
+        changelog_append('# adding {entry} to {setting} in /etc/postfix/main.cf'.format(
+            entry=entry, setting=setting))
+        res = run_and_changelog("postconf {setting}='{new_value}'".format(
+            setting=setting, new_value=new_value))
         if res.startswith("postconf: warning:"):
             # Uhh on Ubuntu 10.04 postconf can't handle non-standard variables at all
             changelog_append("  | %s" % res.rstrip())
             abort("Your version of postconf ignores unknown settings; you'll have to edit /etc/postfix/main.cf and reload postfix manually.")
-        run_and_changelog("postfix reload")
+        if reload_postfix:
+            run_and_changelog("postfix reload")
+        return True
 
 
 def make_postfix_public():
