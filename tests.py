@@ -31,6 +31,14 @@ def test_asbool():
     assert not asbool(False)
 
 
+def test_aslist():
+    assert aslist('') == []
+    assert aslist('foo bar') == ['foo', 'bar']
+    assert aslist('foo  bar') == ['foo', 'bar']
+    assert aslist(['foo', 'bar']) == ['foo', 'bar']
+    assert aslist(('foo', 'bar')) == ['foo', 'bar']
+
+
 def test_parse_git_repo():
     r = parse_git_repo('fridge.pov.lt:git/repo.git')
     assert r.scheme == 'ssh'

@@ -46,6 +46,14 @@ def asbool(v):
         return bool(v)
 
 
+def aslist(v):
+    """Convert value to list."""
+    if isinstance(v, basestring):
+        return v.split()
+    else:
+        return list(v)
+
+
 #
 # System management helpers
 #
