@@ -447,7 +447,7 @@ def ensure_postgresql_db(dbname, owner):
 #
 
 def install_apache_website(apache_conf_template, domain, context=None,
-                           use_jinja=False):
+                           use_jinja=False, modules=[], reload_apache=True):
     """Upload Apache config for a website and enable it.
 
     Takes care of
@@ -463,12 +463,16 @@ def install_apache_website(apache_conf_template, domain, context=None,
     - assumes any other files (such as SSL certificates and keys) required for
       the Apache config to work are already uploaded
     """
+    modules = aslist(modules)
     generate_file(apache_conf_template,
                   '/etc/apache2/sites-available/{}.conf'.format(domain),
                   context=context, use_jinja=use_jinja)
     ensure_directory('/var/log/apache2/{}'.format(domain))
+    if modules:
+        run_and_changelog("a2enmod {}".format(' '.join(modules)))
     run_and_changelog("a2ensite {}.conf".format(domain))
-    run_and_changelog("service apache2 reload")
+    if reload_apache:
+        run_and_changelog("service apache2 reload")
 
 
 #
