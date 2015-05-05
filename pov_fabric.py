@@ -729,6 +729,15 @@ def make_postfix_public():
 # pov-admin-tools
 #
 
+def has_new_changelog_message():
+    """Check if new-changelog-entry is installed.
+
+    (You can get it by installing pov-admin-tools.)
+    """
+    return (exists('/usr/sbin/new-changelog-entry') or
+            exists('/usr/local/sbin/new-changelog-entry'))
+
+
 def changelog(message, context=None, append=False, optional=True):
     """Append a message to /root/Changelog, with a timestamped header.
 
@@ -743,7 +752,7 @@ def changelog(message, context=None, append=False, optional=True):
     (``message = message.format(**context)``).
     """
     # NB: no assert_shell_safe(): quote() ought to take care of everything.
-    if not optional or exists('/usr/sbin/new-changelog-entry') or exists('/usr/local/sbin/new-changelog-entry'):
+    if not optional or has_new_changelog_message():
         cmd = 'new-changelog-entry'
         if append:
             cmd += ' -a'
