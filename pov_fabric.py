@@ -87,6 +87,19 @@ def ensure_apt_not_outdated():
         sudo("apt-get update -qq")
 
 
+def package_available(package):
+    """See if a package is available for installation."""
+    assert_shell_safe(package)
+    with quiet():
+        output = run('apt-cache madison {}'.format(package))
+    # The terrible: apt-cache always returns status code 0 and never prints
+    # to stderr, no matter if the package is or isn't available.  The error
+    # message is translated.  If the package is available, the output is
+    # a multi-line list with |-separated columns that contain package
+    # names, versions, and the repository info.
+    return '|' in output
+
+
 def package_installed(package):
     """Check if the specified packages is installed."""
     assert_shell_safe(package)
