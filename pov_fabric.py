@@ -780,17 +780,17 @@ def changelog(message, context=None, append=False, optional=True):
         run_as_root(cmd)
 
 
-def changelog_append(message, context=None):
+def changelog_append(message, context=None, optional=True):
     """Append a message to /root/Changelog.
 
     Shortcut for changelog(message, append=True).
     """
-    changelog(message, context, append=True)
+    changelog(message, context, append=True, optional=optional)
 
 
-def changelog_banner(message, context=None):
-    """Append a banner message to /root/Changelog"""
-    changelog("#\n  # %s\n  #" % message, context)
+def changelog_banner(message, context=None, optional=True):
+    """Append a banner message to /root/Changelog."""
+    changelog("#\n  # %s\n  #" % message, context, optional=optional)
 
 
 def run_and_changelog(command, append=True):
