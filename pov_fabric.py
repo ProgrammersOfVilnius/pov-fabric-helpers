@@ -194,12 +194,12 @@ def ensure_known_host(host_key, known_hosts='/root/.ssh/known_hosts'):
     append(known_hosts, host_key, use_sudo=True, shell=True)
 
 
-def ensure_user(user, shell=None, changelog=False):
+def ensure_user(user, shell=None, home=None, changelog=False, create_home=True):
     """Create a system user if it doesn't exist already.
 
     This is idempotent: running it again won't add the same user again.
     """
-    assert_shell_safe(user, shell or '')
+    assert_shell_safe(user, shell or '', home or '')
     with quiet():
         if run("id {user}".format(user=user)).succeeded:
             # XXX: check if shell matches what we asked, and run chsh if not?
@@ -208,7 +208,11 @@ def ensure_user(user, shell=None, changelog=False):
     with settings(sudo_user="root"):
         command = ['adduser --quiet --system --group --disabled-password']
         if shell:
-            command.append('--shell=%s' % shell)
+            command.append('--shell={}'.format(shell))
+        if home:
+            command.append('--home={}'.format(home))
+        if not create_home:
+            command.append('--no-create-home')
         command.append(user)
         doit(" ".join(command))
 
