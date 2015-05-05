@@ -77,7 +77,6 @@ def assert_shell_safe(*args, **kw):
     allowed_chars = set(string.letters + string.digits + '/-._~')
     allowed_chars.update(extra_allow)
     for arg in args:
-        arg = str(arg)
         if not set(arg) <= allowed_chars or arg.startswith('-'):
             raise ValueError('{} is not safe for shell'.format(arg))
 
@@ -239,6 +238,8 @@ def ensure_locales(*languages):
 
 def ensure_directory(pathname, mode=None):
     """Make sure directory exists."""
+    if isinstance(mode, int):
+        mode = oct(mode)  # Python 3 trap BTW
     assert_shell_safe(pathname, mode or '')
     if not exists(pathname, use_sudo=True):
         command = ['install -d']
