@@ -177,6 +177,21 @@ def ssh_key_fingerprint(host_key):
     return output.split()[1]
 
 
+def register_host_key(host_key, fingerprint=None):
+    """Register a known host key.
+
+    This will be used by git_clone() and such to add the host key automatically
+    if you're cloning from the host.
+    """
+    hostname = host_key.split()[0]
+    if hostname in KNOWN_HOSTS and KNOWN_HOSTS[hostname] != host_key:
+        abort("There's a different host key already registered for {}".format(hostname))
+    if fingerprint:
+        if ssh_key_fingerprint(host_key) != fingerprint:
+            abort("SSH host key doesn't match fingerprint")
+    KNOWN_HOSTS[hostname] = host_key
+
+
 def ensure_known_host(host_key, known_hosts='/root/.ssh/known_hosts'):
     """Make sure a host key exists in the known_hosts file.
 
