@@ -77,6 +77,7 @@ def assert_shell_safe(*args, **kw):
     allowed_chars = set(string.letters + string.digits + '/-._~')
     allowed_chars.update(extra_allow)
     for arg in args:
+        arg = str(arg)
         if not set(arg) <= allowed_chars or arg.startswith('-'):
             raise ValueError('{} is not safe for shell'.format(arg))
 
