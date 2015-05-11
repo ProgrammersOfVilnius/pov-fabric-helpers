@@ -708,11 +708,12 @@ def install_postfix_virtual_table(local, remote, changelog_append=True):
     If it's True, appends to the current message.
     """
     assert_shell_safe(remote)
-    changelog('# updated {remote}'.format(remote=remote),
-              append=changelog_append)
-    put(local, remote, use_sudo=True, mode=0o644)
-    sudo("chown root:root {remote}".format(remote=remote))
-    run_and_changelog("postmap {remote}".format(remote=remote))
+    if upload_file(local, remote):
+        changelog('# updated {remote}'.format(remote=remote),
+                  append=changelog_append)
+        run_and_changelog("postmap {remote}".format(remote=remote))
+    # consider running postmap if the file exists and hasn't changed but the
+    # corresponding .map file is missing or outdated
     add_postfix_virtual_map('hash:' + remote)
     make_postfix_public()
 
