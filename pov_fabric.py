@@ -423,16 +423,20 @@ def git_update(work_dir, branch='master', force=False, changelog=False,
     with cd(work_dir):
         with settings(shell_env=env):
             sudo("git fetch")
+        old_commit = sudo("git describe --always --dirty", quiet=True).strip()
         if force:
-            changelog_append('cd {work_dir} && git fetch && git reset --hard origin/{branch}'.format(
+            changelog_append('cd {work_dir}\n  git fetch && git reset --hard origin/{branch}'.format(
                 work_dir=work_dir, branch=branch))
             sudo("git reset --hard origin/{branch}".format(branch=branch))
         else:
-            changelog_append('cd {work_dir} && git pull --ff-only'.format(work_dir=work_dir))
+            changelog_append('cd {work_dir}\n  git pull --ff-only'.format(work_dir=work_dir))
             sudo("git merge --ff-only origin/{branch}".format(branch=branch))
         got_commit = sudo("git describe --always --dirty", quiet=True).strip()
     if changelog:
-        changelog_append('# got commit {sha}'.format(sha=got_commit))
+        if old_commit == got_commit:
+            changelog_append('  # no changes')
+        else:
+            changelog_append('  # update {oldsha}..{sha}'.format(oldsha=old_commit, sha=got_commit))
     return got_commit
 
 
