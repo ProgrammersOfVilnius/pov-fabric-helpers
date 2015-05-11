@@ -252,9 +252,13 @@ def ensure_locales(*languages):
 
 
 def ensure_directory(pathname, mode=None):
-    """Make sure directory exists."""
+    """Make sure directory exists.
+
+    Returns True if it had to create the directory, False if the directory
+    already existed.
+    """
     if isinstance(mode, int):
-        mode = oct(mode)  # Python 3 trap BTW
+        mode = '{:o}'.format(mode)
     assert_shell_safe(pathname, mode or '')
     if not exists(pathname, use_sudo=True):
         command = ['install -d']
@@ -262,6 +266,9 @@ def ensure_directory(pathname, mode=None):
             command.append('-m{}'.format(mode))
         command.append(pathname)
         sudo(' '.join(command))
+        return True
+    else:
+        return False
 
 
 def generate_file(template, filename, context=None, use_jinja=False,
