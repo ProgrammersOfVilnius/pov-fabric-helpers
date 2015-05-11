@@ -3,6 +3,7 @@ Fabric helpers
 """
 
 import hashlib
+import os
 import posixpath
 import subprocess
 import string
@@ -17,7 +18,8 @@ from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 from fabric.api import (
     run, sudo, quiet, settings, cd, env, abort, task, with_settings,
 )
-from fabric.contrib.files import exists, append, upload_template
+from fabric.contrib.files import exists, append
+from fabric.utils import apply_lcwd
 from fabric.sftp import SFTP
 
 
@@ -324,6 +326,37 @@ def upload_file(local_file, remote_path, mode=0o644, owner="root:root",
             return True
 
 
+def render_jinja2(template_filename, context, template_dir=None):
+    """Render a Jinja2 template.
+
+    Based on fabric.contrib.files.upload_template.
+
+    Differences: adds back the trailing newline that Jinja2 eats for some
+    reason.
+    """
+    from jinja2 import Environment, FileSystemLoader
+    template_dir = template_dir or os.getcwd()
+    template_dir = apply_lcwd(template_dir, env)
+    jenv = Environment(loader=FileSystemLoader(template_dir))
+    text = jenv.get_template(template_filename).render(**context or {})
+    return text.encode('UTF-8') + '\n'
+
+
+def render_sinterp(filename, context=None, template_dir=None):
+    """Render a Python 2 string template.
+
+    Based on fabric.contrib.files.upload_template.
+    """
+    if template_dir:
+        filename = os.path.join(template_dir, filename)
+    filename = apply_lcwd(filename, env)
+    with open(os.path.expanduser(filename)) as inputfile:
+        text = inputfile.read()
+    if context:
+        text = text % context
+    return text
+
+
 def generate_file(template, filename, context=None, use_jinja=False,
                   mode=0o644, owner="root:root", changelog_append=True):
     """Generate a file from a template
@@ -340,19 +373,22 @@ def generate_file(template, filename, context=None, use_jinja=False,
 
     If ``changelog_append`` is True, calls changelog_append() to note that
     ``filename`` was generated.
+
+    Returns True if it had to replace the file, False if the file already
+    existed with the right content.
     """
     assert_shell_safe(filename)
     ensure_directory(posixpath.dirname(filename))
-    changelog('# generated {filename}'.format(filename=filename),
-              append=changelog_append)
-    upload_template(template, filename, context=context, use_jinja=use_jinja,
-                    mode=mode, use_sudo=True)
     if use_jinja:
-        # some kind of a bug in Jinja2 eats the trailing newline in the file
-        sudo('echo >> {filename}'.format(filename=filename))
-    if owner is not None:
-        assert_shell_safe(*owner.split(':'))
-        sudo("chown {owner} {filename}".format(owner=owner, filename=filename))
+        text = render_jinja2(template, context)
+    else:
+        text = render_sinterp(template, context)
+    if upload_file(StringIO(text), filename, mode=mode, owner=owner):
+        changelog('# generated {filename}'.format(filename=filename),
+                  append=changelog_append)
+        return True
+    else:
+        return False
 
 
 def download_file(filename, url):
