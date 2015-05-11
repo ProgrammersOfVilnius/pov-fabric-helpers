@@ -15,7 +15,7 @@ from contextlib import closing
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
 from fabric.api import (
-    run, sudo, quiet, settings, cd, env, abort, task, with_settings, put
+    run, sudo, quiet, settings, cd, env, abort, task, with_settings,
 )
 from fabric.contrib.files import exists, append, upload_template
 from fabric.sftp import SFTP
@@ -658,9 +658,8 @@ def generate_ssl_config(conffile, country, state, locality, organization,
                organization=organization,
                organizational_unit=organizational_unit,
                common_name=common_name, email=email)
-    changelog_append("# generated {conffile}".format(conffile=conffile))
-    put(StringIO(config), conffile, use_sudo=True, mode=0o644)
-    sudo("chown root:root {conffile}".format(conffile=conffile))
+    if upload_file(StringIO(config), conffile):
+        changelog_append("# generated {conffile}".format(conffile=conffile))
 
 
 def generate_ssl_key(keyfile, csrfile, conffile):
