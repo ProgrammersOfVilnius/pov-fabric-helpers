@@ -2,6 +2,7 @@
 Fabric helpers
 """
 
+import hashlib
 import posixpath
 import subprocess
 import string
@@ -10,12 +11,14 @@ import tempfile
 import textwrap
 import urlparse
 from cStringIO import StringIO
+from contextlib import closing
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
 from fabric.api import (
     run, sudo, quiet, settings, cd, env, abort, task, with_settings, put
 )
 from fabric.contrib.files import exists, append, upload_template
+from fabric.sftp import SFTP
 
 
 #
@@ -269,6 +272,56 @@ def ensure_directory(pathname, mode=None):
         return True
     else:
         return False
+
+
+def upload_file(local_file, remote_path, mode=0o644, owner="root:root",
+                temp_dir=""):
+    """Upload a file to a remote host.
+
+    ``local_file`` can be a filename or a seekable file-like object.  Globbing
+    is not supported.
+
+    ``remote_file`` should be a full filename, not just the directory.
+
+    ``mode`` can be an integer (e.g. 0o755).
+
+    Bug: doesn't handle ``with cd(...):`` or ``with lcd(...):``.  Probably.
+
+    Bug: doesn't set mode/ownership if the file exists and has the same content
+    but different mode/ownership.
+
+    Warning: is not suitable for uploading secrets (changes the mode after
+    uploading the file), unless you take care to specify ``temp_dir`` to point
+    to a non-world-readable area.
+
+    Undocumented features that are subject to change without notice:
+    ``mode`` can be a string or None; ``owner`` can be None.
+    """
+    if isinstance(mode, int):
+        mode = '{:o}'.format(mode)
+    assert_shell_safe(remote_path, mode or '', temp_dir)
+    assert_shell_safe(owner or '', extra_allow=':')
+    local_is_path = not callable(getattr(local_file, 'read', None))
+    with closing(SFTP(env.host_string)) as ftp:
+        tmp_path = posixpath.join(
+            temp_dir, hashlib.sha1(env.host_string + remote_path).hexdigest())
+        assert_shell_safe(tmp_path)
+        ftp.put(local_file, tmp_path, use_sudo=False, mirror_local_mode=False,
+                mode=None, local_is_path=local_is_path, temp_dir="")
+        with quiet():
+            same = sudo("test -f {realfile} && cmp -s {tempfile} {realfile}".format(
+                tempfile=tmp_path, realfile=remote_path)).succeeded
+        if same:
+            sudo("rm {tempfile}".format(tempfile=tmp_path))
+            return False
+        else:
+            if mode is not None:
+                sudo('chmod {mode} {tempfile}'.format(mode=mode, tempfile=tmp_path))
+            if owner:
+                sudo('chown {owner} {tempfile}'.format(owner=owner, tempfile=tmp_path))
+            sudo("mv {tempfile} {realfile}".format(tempfile=tmp_path,
+                                                   realfile=remote_path))
+            return True
 
 
 def generate_file(template, filename, context=None, use_jinja=False,
