@@ -585,7 +585,7 @@ def ensure_postgresql_db(dbname, owner):
     """
     assert_shell_safe(dbname)
     if not postgresql_db_exists(dbname):
-        sudo("LC_ALL=C.UTF-8 createdb -E utf-8 -T template0 -O %s %s" % (owner, dbname),
+        sudo("LC_ALL=C.UTF-8 createdb -E utf-8 -l en_US.UTF-8 -T template0 -O %s %s" % (owner, dbname),
              user='postgres')
 
 
