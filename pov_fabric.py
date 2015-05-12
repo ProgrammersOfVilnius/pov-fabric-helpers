@@ -305,6 +305,9 @@ def upload_file(local_file, remote_path, mode=0o644, owner="root:root",
     assert_shell_safe(owner or '', extra_allow=':')
     local_is_path = not callable(getattr(local_file, 'read', None))
     with closing(SFTP(env.host_string)) as ftp:
+        if env.get('cwd'):
+            home = ftp.normalize('.')
+            temp_dir = posixpath.join(home, temp_dir)
         tmp_path = posixpath.join(
             temp_dir, hashlib.sha1(env.host_string + remote_path).hexdigest())
         assert_shell_safe(tmp_path)
