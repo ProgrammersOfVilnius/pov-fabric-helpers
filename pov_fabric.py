@@ -499,7 +499,7 @@ def git_update(work_dir, branch='master', force=False, changelog=False,
         if not tracking_branch.startswith("refs/remotes/origin/"):
             abort("{} is not tracking a branch from remote 'origin'".format(work_dir))
         tracking_branch = tracking_branch[len("refs/remotes/origin/"):]
-        if tracking_branch != branch:
+        if tracking_branch != branch and not force:
             abort("{} is not tracking branch {} (it's tracking {})".format(
                 work_dir, branch, tracking_branch))
         git_repo = run("git config --get remote.origin.url", quiet=True)
