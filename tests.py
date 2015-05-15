@@ -16,6 +16,7 @@ from pov_fabric import (
     GITHUB_SSH_HOST_KEY_FINGERPRINT,
     Instance,
     _pythonify_name,
+    _valid_task_name,
     asbool,
     aslist,
     get_instance,
@@ -118,6 +119,8 @@ def test_Instance_definition_and_management(env, stderr):
     assert env.instances["another"] == Instance("another", "localhost")
     assert_raises(SystemExit, Instance.define, "test", "again")
     assert "Instance test is already defined." in stderr.getvalue()
+    assert_raises(SystemExit, Instance.define, "test.test", "localhost")
+    assert "'test.test' is not a valid instance name." in stderr.getvalue()
 
     test()  # noqa: global magically defined by Instance.define()
     assert env.instance == 'test'
@@ -145,6 +148,16 @@ def test_Instance_definition_with_names_that_are_not_valid_Python_identifiers(en
     ___()  # noqa: global magically defined by Instance.define()
     assert env.instance == 'č'
 
+
+def test_valid_task_name():
+    assert _valid_task_name('foo')
+    assert _valid_task_name('foo-bar')
+    assert _valid_task_name('foo_bar')
+    assert not _valid_task_name('')
+    assert not _valid_task_name('foo:bar')
+    assert not _valid_task_name('-foo')
+    assert not _valid_task_name('foo bar')
+    assert not _valid_task_name('foo.bar')
 
 def test_pythonify_name():
     assert _pythonify_name('foo') == 'foo'

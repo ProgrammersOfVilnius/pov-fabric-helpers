@@ -1032,6 +1032,8 @@ def _define_instance(instance):
     Instances are stored in the ``env.instances`` dictionary, which is created
     on demand.
     """
+    if not _valid_task_name(instance.name):
+        abort("'{name}' is not a valid instance name.".format(name=instance.name))
     if not hasattr(env, 'instances'):
         env.instances = {}
     if instance.name in env.instances:
@@ -1055,6 +1057,21 @@ def _define_instance_task(name, instance_name=None, stacklevel=1):
     while fn_name in module_globals:
         fn_name += '_'
     module_globals[fn_name] = instance_task
+
+
+def _valid_task_name(name):
+    """Check if ``name`` is a valid Fabric task name"""
+    if not name:
+        return False
+    if name.startswith('-'):
+        return False
+    if ' ' in name:
+        return False
+    if ':' in name:
+        return False
+    if '.' in name:
+        return False
+    return True
 
 
 def _pythonify_name(name):
