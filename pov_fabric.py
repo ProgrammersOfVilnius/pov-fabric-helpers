@@ -913,7 +913,7 @@ def run_and_changelog(command, append=True):
 
 def run_as_root(command):
     """Run a command as root; use sudo only if necessary."""
-    current_user = env.host_string.partition('@')[0] or env.user
+    current_user = env.host_string.rpartition('@')[0] or env.user
     if current_user != 'root':
         return sudo(command, user='root')
     else:
