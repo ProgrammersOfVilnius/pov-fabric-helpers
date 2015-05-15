@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 """
 Tests for pov_fabric.
 
@@ -10,7 +11,17 @@ import mock
 from nose.tools import assert_raises
 from fabric.utils import _AttributeDict
 
-from pov_fabric import *  # noqa
+from pov_fabric import (
+    GITHUB_SSH_HOST_KEY,
+    GITHUB_SSH_HOST_KEY_FINGERPRINT,
+    Instance,
+    _pythonify_name,
+    asbool,
+    aslist,
+    get_instance,
+    parse_git_repo,
+    ssh_key_fingerprint,
+)
 
 
 def test_ssh_key_matches_fingerprint():
@@ -108,7 +119,7 @@ def test_Instance_definition_and_management(env, stderr):
     assert_raises(SystemExit, Instance.define, "test", "again")
     assert "Instance test is already defined." in stderr.getvalue()
 
-    test()  # global magically defined by Instance.define()
+    test()  # noqa: global magically defined by Instance.define()
     assert env.instance == 'test'
 
     env.command = 'triangulate'
@@ -120,3 +131,25 @@ def test_Instance_definition_and_management(env, stderr):
     del env['instances']
     assert_raises(SystemExit, get_instance, "test")
     assert "There are no instances defined in env.instances" in stderr.getvalue()
+
+
+@mock.patch("sys.stderr", new_callable=StringIO)
+@mock.patch("pov_fabric.env", new_callable=_AttributeDict)
+def test_Instance_definition_with_names_that_are_not_valid_Python_identifiers(env, stderr):
+    Instance.define("ą", "a.example.com")
+    Instance.define("č", "c.example.com")
+
+    __()  # noqa: global magically defined by Instance.define()
+    assert env.instance == 'ą'
+
+    ___()  # noqa: global magically defined by Instance.define()
+    assert env.instance == 'č'
+
+
+def test_pythonify_name():
+    assert _pythonify_name('foo') == 'foo'
+    assert _pythonify_name('foo-bar') == 'foo_bar'
+    assert _pythonify_name('foo.bar') == 'foo_bar'
+    assert _pythonify_name('foo_123') == 'foo_123'
+    assert _pythonify_name('123') == '_123'
+    assert _pythonify_name('ą') == '__'

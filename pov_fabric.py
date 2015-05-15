@@ -1050,7 +1050,19 @@ def _define_instance_task(name, instance_name=None, stacklevel=1):
         env.instance = instance_name
     fn.__doc__ = """Select instance '%s' for subsequent tasks.""" % instance_name
     instance_task = task(name=name)(fn)
-    sys._getframe(stacklevel).f_globals[name.replace('-', '_')] = instance_task
+    fn_name = _pythonify_name(name)
+    module_globals = sys._getframe(stacklevel).f_globals
+    while fn_name in module_globals:
+        fn_name += '_'
+    module_globals[fn_name] = instance_task
+
+
+def _pythonify_name(name):
+    """Coerce the name to a valid Python identifier"""
+    name = ''.join(c if c.isalnum() else '_' for c in name)
+    if name[:1].isdigit():
+        name = '_' + name
+    return name
 
 
 def get_instance(instance_name=None):
