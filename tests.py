@@ -117,12 +117,18 @@ def test_Instance_definition_and_management(env, stderr):
     assert env.instances["test"] == Instance("test", "localhost")
     Instance.define("another", "localhost")
     assert env.instances["another"] == Instance("another", "localhost")
+    Instance.define_alias('retest', 'test')
     assert_raises(SystemExit, Instance.define, "test", "again")
     assert "Instance test is already defined." in stderr.getvalue()
     assert_raises(SystemExit, Instance.define, "test.test", "localhost")
     assert "'test.test' is not a valid instance name." in stderr.getvalue()
+    assert_raises(SystemExit, Instance.define_alias, "test.test", "test")
+    assert "'test.test' is not a valid task name." in stderr.getvalue()
 
     test()  # noqa: global magically defined by Instance.define()
+    assert env.instance == 'test'
+
+    retest()  # noqa: global magically defined by Instance.define_alias()
     assert env.instance == 'test'
 
     env.command = 'triangulate'

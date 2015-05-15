@@ -1046,6 +1046,8 @@ def _define_instance_task(name, instance_name=None, stacklevel=1):
 
     This task will set env.instance to the name of the task.
     """
+    if not _valid_task_name(name):
+        abort("'{name}' is not a valid task name.".format(name=name))
     if instance_name is None:
         instance_name = name
     def fn():
