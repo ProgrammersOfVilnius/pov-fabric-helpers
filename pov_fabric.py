@@ -277,7 +277,7 @@ def ensure_directory(pathname, mode=None):
 
 
 def upload_file(local_file, remote_path, mode=0o644, owner="root:root",
-                temp_dir=""):
+                temp_dir="", changelog=False):
     """Upload a file to a remote host.
 
     ``local_file`` can be a filename or a seekable file-like object.  Globbing
@@ -286,6 +286,9 @@ def upload_file(local_file, remote_path, mode=0o644, owner="root:root",
     ``remote_file`` should be a full filename, not just the directory.
 
     ``mode`` can be an integer (e.g. 0o755).
+
+    ``changelog``, if True, adds a changelog message of the form "uploaded
+    {filename}".
 
     Bug: doesn't handle ``with cd(...):`` or ``with lcd(...):``.  Probably.
 
@@ -326,6 +329,8 @@ def upload_file(local_file, remote_path, mode=0o644, owner="root:root",
                 sudo('chown {owner} {tempfile}'.format(owner=owner, tempfile=tmp_path))
             sudo("mv {tempfile} {realfile}".format(tempfile=tmp_path,
                                                    realfile=remote_path))
+            if changelog:
+                changelog_append("# updated {}".format(remote_path))
             return True
 
 
