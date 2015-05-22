@@ -11,7 +11,7 @@ import sys
 import tempfile
 import textwrap
 import urlparse
-from cStringIO import StringIO
+from StringIO import StringIO
 from contextlib import closing
 from pipes import quote  # TBD: use shlex.quote on Python 3.2+
 
@@ -307,6 +307,8 @@ def upload_file(local_file, remote_path, mode=0o644, owner="root:root",
     assert_shell_safe(remote_path, mode or '', temp_dir)
     assert_shell_safe(owner or '', extra_allow=':')
     local_is_path = not callable(getattr(local_file, 'read', None))
+    if isinstance(local_file, StringIO) and not getattr(local_file, 'name', None):
+        local_file.name = os.path.basename(remote_path)
     with closing(SFTP(env.host_string)) as ftp:
         if env.get('cwd'):
             home = ftp.normalize('.')
