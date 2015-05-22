@@ -616,14 +616,19 @@ def install_apache_website(apache_conf_template, domain, context=None,
       the Apache config to work are already uploaded
     """
     modules = aslist(modules)
-    generate_file(apache_conf_template,
-                  '/etc/apache2/sites-available/{}.conf'.format(domain),
-                  context=context, use_jinja=use_jinja)
+    changed = generate_file(apache_conf_template,
+                            '/etc/apache2/sites-available/{}.conf'.format(domain),
+                            context=context, use_jinja=use_jinja)
     ensure_directory('/var/log/apache2/{}'.format(domain))
+    modules = [m for m in modules
+               if not exists('/etc/apache2/mods-enabled/{}.load'.format(m))]
     if modules:
         run_and_changelog("a2enmod {}".format(' '.join(modules)))
-    run_and_changelog("a2ensite {}.conf".format(domain))
-    if reload_apache:
+        changed = True
+    if not exists('/etc/apache2/sites-enabled/{}.conf'.format(domain)):
+        run_and_changelog("a2ensite {}.conf".format(domain))
+        changed = True
+    if reload_apache and changed:
         run_and_changelog("service apache2 reload")
 
 
