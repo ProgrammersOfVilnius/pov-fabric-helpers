@@ -10,7 +10,7 @@ with open(os.path.join(here, 'CHANGES.rst')) as f:
 
 setup(
     name='pov-fabric-helpers',
-    version='0.2',
+    version='0.3.dev0',
     author='Marius Gedminas',
     author_email='marius@pov.lt',
     url='https://github.com/ProgrammersOfVilnius/pov-fabric-helpers/',
