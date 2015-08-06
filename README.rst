@@ -2,7 +2,7 @@ Fabric Helpers
 ==============
 
 This is a collection of helpers we use in Fabric_ scripts.  They're primarily
-intended to manage Ubuntu servers (10.04 LTS, 12.04 LTS or 14.04 LTS).
+intended to manage Ubuntu servers (12.04 LTS or 14.04 LTS).
 
 .. _Fabric: http://www.fabfile.org/
 
