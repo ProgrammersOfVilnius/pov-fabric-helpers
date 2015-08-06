@@ -110,6 +110,8 @@ def package_installed(package):
     assert_shell_safe(package)
     # XXX: doing this in a loop is slow :(
     with quiet():
+        # XXX idea: return exists('/var/lib/dpkg/info/{}.list'.format(package))
+        # caveats: libnss-myhostname:amd64.list :/
         status = run("dpkg-query -W --showformat='${Status}' %s" % package)
         return status == "install ok installed"
 
