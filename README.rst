@@ -6,57 +6,75 @@ intended to manage Ubuntu servers (12.04 LTS or 14.04 LTS).
 
 .. _Fabric: http://www.fabfile.org/
 
-A possibly-incomplete list of them:
+.. contents::
 
-- ``ensure_apt_not_outdated()``
+
+Helpers (aka why would I want this?)
+------------------------------------
+
+APT packages:
+
+- ``ensure_apt_not_outdated()`` - runs ``apt-get update`` at most once a day
 - ``install_packages("vim screen build-essential")``
 - ``install_missing_packages("vim screen build-essential")``
-- ``ensure_known_host("example.com ssh-rsa AAA....")``
+- ``if not package_installed('git'): ...``
+- ``if not package_available('pov-admin-helpers'): ...``
+
+User accounts:
+
 - ``ensure_user("myusername")``
+
+SSH:
+
+- ``ensure_known_host("example.com ssh-rsa AAA....")``
+
+Locales:
+
 - ``ensure_locales("en", "lt")``
+
+Files and directories:
+
 - ``ensure_directory("/srv/data", mode=0o700)``
 - ``upload_file('crontab', '/etc/cron.d/mycrontab')``
 - ``generate_file('crontab.in', '/etc/cron.d/mycrontab', context, use_jinja=True)``
 - ``download_file('/home/user/.ssh/authorized_keys', 'https://example.com/ssh.pubkey')``
+
+GIT:
+
 - ``git_clone("git@github.com:ProgrammersOfVilnius/project.git", "/opt/project")``
 - ``git_update("/opt/project")``
+
+PostgreSQL:
+
 - ``ensure_postgresql_user("username")``
 - ``ensure_postgresql_db("dbname", "owner")``
+
+Apache:
+
+- ``ensure_ssl_key(...)``
 - ``install_apache_website('apache.conf.in', 'example.com', context, use_jinja=True, modules='ssl rewrite proxy_http')```
+
+Postfix:
+
 - ``install_postfix_virtual_table('virtual', '/etc/postfix/virtual.example.com')```
 - ``make_postfix_public()``
-- ``changelog("# Installing stuff")`` (requires pov-admin-tools_)
-- ``changelog_append("# more stuff")`` (requires pov-admin-tools_)
-- ``changelog_banner("Installing stuff")`` (requires pov-admin-tools_)
-- ``run_and_changelog("apt-get install stuff")`` (requires pov-admin-tools_)
+
+Keeping a changelog in /root/Changelog (requires
+/usr/sbin/new-changelog-entry from pov-admin-tools_)
+
+- ``changelog("# Installing stuff")``
+- ``changelog_append("# more stuff")``
+- ``changelog_banner("Installing stuff")``
+- ``run_and_changelog("apt-get install stuff")``
+
+plus many other helpers have ``changelog`` and/or ``changelog_append``
+arguments to invoke these implicitly.
 
 .. _pov-admin-tools: https://github.com/ProgrammersOfVilnius/pov-admin-tools
 
-.. contents::
 
-
-Usage
------
-
-For now add this repository as a git submodule
-
-.. code:: bash
-
-  cd ~/src/project
-  git submodule add https://github.com/ProgrammersOfVilnius/pov-fabric-helpers
-
-and in your ``fabfile.py`` add
-
-.. code:: python
-
-  sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'pov-fabric-helpers'))
-  if not os.path.exists(os.path.join(sys.path[0], 'pov_fabric.py')):
-      sys.exit("Please run 'git submodule update --init'.")
-  from pov_fabric import ...
-
-
-Instance management
--------------------
+Instance management API
+-----------------------
 
 All of my fabfiles can manage several *instances* of a particular service.
 Externally this looks like ::
@@ -107,8 +125,8 @@ To facilitate this ``pov_fabric`` provides three things:
    (BTW you can also add parameters with no sensible default this way, e.g.
    ``BaseInstance.with_params(user=BaseInstance.REQUIRED)``.)
 
-2. ``Instance.define()`` that defines new instances and creates tasks for
-   selecting them
+2. An ``Instance.define()`` class method that defines new instances and
+   creates tasks for selecting them
 
    .. code:: python
 
@@ -128,7 +146,10 @@ To facilitate this ``pov_fabric`` provides three things:
         dbname='sentry-staging',
     )
 
-3. A ``get_instance()`` method that returns the currently selected instance
+   (BTW you can also define aliases with ``Instance.define_alias('prod',
+   'production')``.)
+
+3. A ``get_instance()`` function that returns the currently selected instance
    (or aborts with an error if the user didn't select one)
 
    .. code:: python
@@ -162,6 +183,41 @@ Be careful if you mix styles, e.g. ::
 
 will run ``task1`` and ``task3`` on ``instance1`` and it will run ``task2`` on
 ``instance2``.
+
+
+Usage
+-----
+
+Get the latest release from PyPI::
+
+    pip install pov-fabric-helpers
+
+and then import the helpers you want in your ``fabfile.py``
+
+.. code:: python
+
+    from fabric.api import ...
+    from pov_fabric import ...
+
+
+Usage as a git submodule
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can add this repository as a git submodule
+
+.. code:: bash
+
+  cd ~/src/project
+  git submodule add https://github.com/ProgrammersOfVilnius/pov-fabric-helpers
+
+and in your ``fabfile.py`` add
+
+.. code:: python
+
+  sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'pov-fabric-helpers'))
+  if not os.path.exists(os.path.join(sys.path[0], 'pov_fabric.py')):
+      sys.exit("Please run 'git submodule update --init'.")
+  from pov_fabric import ...
 
 
 Testing Fabfiles with Vagrant
