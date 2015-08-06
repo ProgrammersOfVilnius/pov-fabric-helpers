@@ -10,13 +10,21 @@ A possibly-incomplete list of them:
 
 - ``ensure_apt_not_outdated()``
 - ``install_packages("vim screen build-essential")``
-- ``ensure_known_host("hostname ssh-rsa AAA....")``
-- ``ensure_user("username")``
+- ``install_missing_packages("vim screen build-essential")``
+- ``ensure_known_host("example.com ssh-rsa AAA....")``
+- ``ensure_user("myusername")``
 - ``ensure_locales("en", "lt")``
+- ``ensure_directory("/srv/data", mode=0o700)``
+- ``upload_file('crontab', '/etc/cron.d/mycrontab')``
+- ``generate_file('crontab.in', '/etc/cron.d/mycrontab', context, use_jinja=True)``
+- ``download_file('/home/user/.ssh/authorized_keys', 'https://example.com/ssh.pubkey')``
 - ``git_clone("git@github.com:ProgrammersOfVilnius/project.git", "/opt/project")``
 - ``git_update("/opt/project")``
 - ``ensure_postgresql_user("username")``
 - ``ensure_postgresql_db("dbname", "owner")``
+- ``install_apache_website('apache.conf.in', 'example.com', context, use_jinja=True, modules='ssl rewrite proxy_http')```
+- ``install_postfix_virtual_table('virtual', '/etc/postfix/virtual.example.com')```
+- ``make_postfix_public()``
 - ``changelog("# Installing stuff")`` (requires pov-admin-tools_)
 - ``changelog_append("# more stuff")`` (requires pov-admin-tools_)
 - ``changelog_banner("Installing stuff")`` (requires pov-admin-tools_)
