@@ -168,8 +168,7 @@ destroying real servers in the process.  Here's how:
   .. code:: ruby
 
     Vagrant.configure("2") do |config|
-      config.vm.box = "precise64"  # Ubuntu 12.04
-      config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+      config.vm.box = "ubuntu/precise64"  # Ubuntu 12.04
       config.vm.provider :virtualbox do |vb|
         vb.customize ["modifyvm", :id, "--memory", "1024"]
       end
@@ -187,7 +186,7 @@ destroying real servers in the process.  Here's how:
       UserKnownHostsFile /dev/null
       StrictHostKeyChecking no
       PasswordAuthentication no
-      IdentityFile /home/mg/.vagrant.d/insecure_private_key
+      IdentityFile ~/.vagrant.d/insecure_private_key
       IdentitiesOnly yes
       LogLevel FATAL
 
