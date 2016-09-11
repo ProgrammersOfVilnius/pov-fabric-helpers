@@ -14,6 +14,7 @@ from fabric.utils import _AttributeDict
 from pov_fabric import (
     GITHUB_SSH_HOST_KEY,
     GITHUB_SSH_HOST_KEY_FINGERPRINT,
+    GITHUB_SSH_HOST_KEY_FINGERPRINT_SHA256,
     Instance,
     _pythonify_name,
     _valid_task_name,
@@ -26,7 +27,9 @@ from pov_fabric import (
 
 
 def test_ssh_key_matches_fingerprint():
-    assert ssh_key_fingerprint(GITHUB_SSH_HOST_KEY) == GITHUB_SSH_HOST_KEY_FINGERPRINT
+    assert ssh_key_fingerprint(GITHUB_SSH_HOST_KEY, force_md5=True) == GITHUB_SSH_HOST_KEY_FINGERPRINT
+    assert ssh_key_fingerprint(GITHUB_SSH_HOST_KEY) in [GITHUB_SSH_HOST_KEY_FINGERPRINT,
+                                                        GITHUB_SSH_HOST_KEY_FINGERPRINT_SHA256]
 
 
 def test_asbool():

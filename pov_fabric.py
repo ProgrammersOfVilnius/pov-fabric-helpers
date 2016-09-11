@@ -32,6 +32,7 @@ GITHUB_SSH_HOST_KEY = "github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdn
 
 # Fingerprint from https://help.github.com/articles/what-are-github-s-ssh-key-fingerprints/
 GITHUB_SSH_HOST_KEY_FINGERPRINT = "16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48"
+GITHUB_SSH_HOST_KEY_FINGERPRINT_SHA256 = "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
 
 # Known SSH host keys to be added to ~/.ssh/known_hosts if needed
 KNOWN_HOSTS = {
@@ -171,8 +172,12 @@ def install_missing_packages(*packages, **kw):
     install_packages(*packages, **kw)
 
 
-def ssh_key_fingerprint(host_key):
-    """Compute the fingerprint of a public key."""
+def ssh_key_fingerprint(host_key, force_md5=False):
+    """Compute the fingerprint of a public key.
+
+    Can return a SHA256 or an MD5 fignerprint, depending on your OpenSSH
+    version.  You can insist on MD5 if you want.
+    """
     if not host_key.startswith('ssh-'):
         host_key = host_key.split(None, 1)[1]
     with tempfile.NamedTemporaryFile(prefix='pov-fabric-') as f:
@@ -186,26 +191,31 @@ def ssh_key_fingerprint(host_key):
         # Example output (new ssh with -E md5):
         # "2048 MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48 no comment (RSA)\n"
         fingerprint = output.split()[1]
-        if fingerprint.startswith('SHA256'):
+        if fingerprint.startswith('SHA256') and force_md5:
             # we want MD5 still, for backwards-compat, but we should stop doing
             # that eventually
             output = subprocess.check_output(['ssh-keygen', '-l', '-f', f.name,
                                               '-E', 'md5'])
-            fingerprint = output.split()[1].replace('MD5:', '')
+        fingerprint = output.split()[1].replace('MD5:', '')
     return fingerprint
 
 
-def register_host_key(host_key, fingerprint=None):
+def register_host_key(host_key, fingerprint=None, fingerprints=None, force_md5=False):
     """Register a known host key.
 
     This will be used by git_clone() and such to add the host key automatically
     if you're cloning from the host.
     """
+    if fingerprint is not None:
+        if fingerprints is not None:
+            raise ValueError('Please provide either fingerprint or fingerprints, but not both')
+        fingerprints = [fingerprint]
+        force_md5 = True
     hostname = host_key.split()[0]
     if hostname in KNOWN_HOSTS and KNOWN_HOSTS[hostname] != host_key:
         abort("There's a different host key already registered for {}".format(hostname))
     if fingerprint:
-        if ssh_key_fingerprint(host_key) != fingerprint:
+        if ssh_key_fingerprint(host_key, force_md5=force_md5) not in fingerprints:
             abort("SSH host key doesn't match fingerprint")
     KNOWN_HOSTS[hostname] = host_key
 
