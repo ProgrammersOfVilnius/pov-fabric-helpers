@@ -5,7 +5,15 @@ Changelog
 0.3 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- ``register_host_key()`` now takes ``fingerprints`` so you can specify both
+  MD5 and SHA256 fingerprints.
+
+  Use either ``register_host_key(key, fingerprint=md5_fprint)`` or
+  ``register_host_key(key, fingerprints=[md5_fprint, sha256_fprint])``.
+
+- Low-level helper ``ssh_key_fingerprint()`` now takes ``force_md5`` so you
+  can insist on MD5 instead of whatever OpenSSH gives you by default (which is
+  SHA256 for modern OpenSSH).
 
 
 0.2 (2015-08-06)
