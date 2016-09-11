@@ -1,8 +1,8 @@
 test:
-	nosetests
+	py.test tests.py
 
 coverage:
-	coverage run -m nose
+	coverage run -m py.test tests.py
 
 release:
 	# pip install zest.releaser
