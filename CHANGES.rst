@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-0.3 (unreleased)
+0.3 (2016-09-11)
 ----------------
 
 - ``register_host_key()`` now takes ``fingerprints`` so you can specify both
