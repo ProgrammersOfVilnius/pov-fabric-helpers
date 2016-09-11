@@ -179,9 +179,20 @@ def ssh_key_fingerprint(host_key):
         f.write(host_key)
         f.flush()
         output = subprocess.check_output(['ssh-keygen', '-l', '-f', f.name])
-        # Example output:
+        # Example output (old ssh):
         # "2048 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48 /tmp/github_rsa.pub (RSA)\n"
-    return output.split()[1]
+        # Example output (new ssh):
+        # "2048 SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8 no comment (RSA)\n"
+        # Example output (new ssh with -E md5):
+        # "2048 MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48 no comment (RSA)\n"
+        fingerprint = output.split()[1]
+        if fingerprint.startswith('SHA256'):
+            # we want MD5 still, for backwards-compat, but we should stop doing
+            # that eventually
+            output = subprocess.check_output(['ssh-keygen', '-l', '-f', f.name,
+                                              '-E', 'md5'])
+            fingerprint = output.split()[1].replace('MD5:', '')
+    return fingerprint
 
 
 def register_host_key(host_key, fingerprint=None):
